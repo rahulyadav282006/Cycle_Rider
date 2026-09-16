@@ -1,0 +1,66 @@
+# ================================
+# NewRider Git Ignore
+# ================================
+
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Frontend build output
+dist/
+**/dist/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Python test/cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage
+coverage/
+
+# Vite
+.vite/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# MongoDB local data
+data/
+mongodb_data/
+mongo_data/
