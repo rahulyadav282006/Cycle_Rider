@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -10,34 +10,125 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import StraightenOutlinedIcon from '@mui/icons-material/StraightenOutlined';
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import { colors } from '../../theme/colors';
 import { RideBadge } from '../../components/ui/RideBadge';
 import { RideButton } from '../../components/ui/RideButton';
 import { ReportSummaryCards } from './ReportSummaryCards';
-import { ReportToolbar } from './ReportToolbar';
-import {
-  MOCK_REPORT_EVENT,
-  MOCK_REPORT_CHECKPOINTS,
-} from './mockReportsData';
+import { reportService, eventService, checkpointService } from '../../api/services';
 
 export interface EventSummaryReportProps {
+  eventId?: string;
   onBackToReports: () => void;
   onExport: (format: 'CSV' | 'Excel') => void;
 }
 
 export const EventSummaryReport: React.FC<EventSummaryReportProps> = ({
+  eventId,
   onBackToReports,
   onExport,
 }) => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [summaryData, setSummaryData] = useState<{
+    eventName: string;
+    date: string;
+    location: string;
+    distanceKm: number;
+    startTime: string;
+    organizerName: string;
+    status: string;
+    totalRegistered: number;
+    totalStarted: number;
+    totalFinished: number;
+    totalDnf: number;
+    totalHomeSafe: number;
+    completionRate: number;
+  }>({
+    eventName: 'Event',
+    date: '',
+    location: '',
+    distanceKm: 0,
+    startTime: '06:00 AM',
+    organizerName: 'Organizer Admin',
+    status: 'Upcoming',
+    totalRegistered: 0,
+    totalStarted: 0,
+    totalFinished: 0,
+    totalDnf: 0,
+    totalHomeSafe: 0,
+    completionRate: 0,
+  });
+
+  const [checkpoints, setCheckpoints] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (eventId) {
+      setLoading(true);
+      Promise.all([
+        eventService.getEvent(eventId).catch(() => null),
+        reportService.getReport(eventId, 'event_summary').catch(() => null),
+        reportService.getReport(eventId, 'checkpoints').catch(() => null),
+      ])
+        .then(([ev, rep, cpRep]) => {
+          if (!isMounted) return;
+          if (ev) {
+            setSummaryData({
+              eventName: ev.eventName || 'Event',
+              date: ev.rideDate || '',
+              location: ev.location || '',
+              distanceKm: ev.rideDistance || 0,
+              startTime: ev.startTime || '06:00 AM',
+              organizerName: ev.organizerName || 'Organizer Admin',
+              status: ev.status === 'active' ? 'Active' : ev.status === 'completed' ? 'Completed' : 'Upcoming',
+              totalRegistered: rep?.totalRegistered ?? (ev.riderCount || 0),
+              totalStarted: rep?.totalStarted ?? 0,
+              totalFinished: rep?.totalFinished ?? 0,
+              totalDnf: rep?.totalDnf ?? 0,
+              totalHomeSafe: rep?.totalFinished ?? 0,
+              completionRate: rep?.completionRate ?? 0,
+            });
+          }
+
+          if (cpRep && Array.isArray(cpRep.items)) {
+            setCheckpoints(cpRep.items);
+          } else {
+            checkpointService.listCheckpoints(eventId).then((list) => {
+              if (isMounted && Array.isArray(list)) {
+                setCheckpoints(
+                  list.map((c) => ({
+                    checkpointId: c.id,
+                    sequenceNumber: c.sequenceNumber,
+                    name: c.name,
+                    mandatory: c.mandatory,
+                    passedCount: 0,
+                    completionPct: 0,
+                  }))
+                );
+              }
+            }).catch(() => {});
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
+
   const performanceCards = [
-    { label: 'REGISTERED RIDERS', value: 342, color: colors.text.primary },
-    { label: 'STARTED', value: 320, color: colors.primary.main },
-    { label: 'FINISHED', value: 286, color: '#2563EB' },
-    { label: 'DNF', value: 14, color: colors.status.error.dot },
-    { label: 'HOME SAFE', value: 270, color: '#059669' },
+    { label: 'REGISTERED RIDERS', value: summaryData.totalRegistered, color: colors.text.primary },
+    { label: 'STARTED', value: summaryData.totalStarted, color: colors.primary.main },
+    { label: 'FINISHED', value: summaryData.totalFinished, color: '#2563EB' },
+    { label: 'DNF', value: summaryData.totalDnf, color: colors.status.error.dot },
+    { label: 'COMPLETION RATE', value: `${summaryData.completionRate}%`, color: '#059669' },
   ];
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <Box>
@@ -59,330 +150,255 @@ export const EventSummaryReport: React.FC<EventSummaryReportProps> = ({
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: { xs: 'flex-start', sm: 'center' },
             justifyContent: 'space-between',
-            pb: 3,
-            borderBottom: `2px solid ${colors.brand.primary}`,
             gap: 2,
+            pb: 3,
+            borderBottom: `2px solid ${colors.surface.borderStrong}`,
             mb: 3,
           }}
         >
           <Box>
             <Typography
-              sx={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: colors.primary.main,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                mb: 0.5,
-              }}
-            >
-              RideTrack Official Event Executive Summary
-            </Typography>
-            <Typography
               variant="h1"
               sx={{
                 fontSize: { xs: '1.5rem', sm: '1.875rem' },
-                fontWeight: 800,
+                fontWeight: 900,
                 color: colors.text.primary,
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.2,
+                mb: 0.75,
               }}
             >
-              {MOCK_REPORT_EVENT.name}
+              Event Executive Summary Report
+            </Typography>
+            <Typography sx={{ fontSize: '0.875rem', color: colors.text.secondary }}>
+              RideTrack Comprehensive Audit & Operational Summary
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <RideBadge status="active" label={MOCK_REPORT_EVENT.status} size="md" />
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
             <RideButton
               variant="secondary"
               size="sm"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               startIcon={<PrintOutlinedIcon sx={{ fontSize: 16 }} />}
             >
-              Print
+              Print Report
+            </RideButton>
+            <RideButton
+              variant="primary"
+              size="sm"
+              onClick={() => onExport('CSV')}
+            >
+              Export CSV
+            </RideButton>
+            <RideButton
+              variant="secondary"
+              size="sm"
+              onClick={() => onExport('Excel')}
+            >
+              Export Excel
             </RideButton>
           </Box>
         </Box>
 
-        {/* Event Information Grid */}
+        {/* Event Key Information Strip */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
-            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            gap: 2.5,
             p: 2.5,
-            backgroundColor: colors.surface.page,
+            backgroundColor: colors.surface.subtle,
             borderRadius: '6px',
             border: `1px solid ${colors.surface.border}`,
-            mb: 3.5,
-          }}
-        >
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-              <CalendarTodayOutlinedIcon sx={{ fontSize: 14, color: colors.text.muted }} />
-              <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted, fontWeight: 500 }}>
-                Date
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-              {MOCK_REPORT_EVENT.date}
-            </Typography>
-          </Box>
-
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-              <PlaceOutlinedIcon sx={{ fontSize: 14, color: colors.text.muted }} />
-              <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted, fontWeight: 500 }}>
-                Location
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-              {MOCK_REPORT_EVENT.location}
-            </Typography>
-          </Box>
-
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-              <StraightenOutlinedIcon sx={{ fontSize: 14, color: colors.text.muted }} />
-              <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted, fontWeight: 500 }}>
-                Ride Distance
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-              {MOCK_REPORT_EVENT.distanceKm} km
-            </Typography>
-          </Box>
-
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-              <AccessTimeOutlinedIcon sx={{ fontSize: 14, color: colors.text.muted }} />
-              <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted, fontWeight: 500 }}>
-                Start Time
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-              {MOCK_REPORT_EVENT.startTime}
-            </Typography>
-          </Box>
-
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-              <PersonOutlineOutlinedIcon sx={{ fontSize: 14, color: colors.text.muted }} />
-              <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted, fontWeight: 500 }}>
-                Organizer
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-              {MOCK_REPORT_EVENT.organizer}
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Toolbar */}
-        <ReportToolbar
-          onExportCsv={() => onExport('CSV')}
-          onExportExcel={() => onExport('Excel')}
-          onBackToReports={onBackToReports}
-          showBack={true}
-        />
-
-        {/* Performance Cards */}
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h2"
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 800,
-              color: colors.text.primary,
-              mb: 1.5,
-            }}
-          >
-            Rider Participation &amp; Completion Metrics
-          </Typography>
-          <ReportSummaryCards items={performanceCards} />
-        </Box>
-
-        {/* Volunteer Coverage Section */}
-        <Box
-          sx={{
-            p: 2.5,
-            backgroundColor: '#F0FDF4',
-            border: '1px solid #BBF7D0',
-            borderRadius: '8px',
             mb: 4,
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            justifyContent: 'space-between',
-            gap: 2,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: '#DCFCE7',
-                color: '#166534',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <PeopleAltOutlinedIcon sx={{ fontSize: 20 }} />
-            </Box>
+            <PlaceOutlinedIcon sx={{ color: colors.primary.main, fontSize: 20 }} />
             <Box>
-              <Typography sx={{ fontSize: '0.9375rem', fontWeight: 800, color: '#166534' }}>
-                Volunteer Staffing Coverage: 8 / 10 Checkpoints Assigned
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                LOCATION / COURSE
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', color: '#15803D' }}>
-                80% route station staffing coverage ensuring continuous timer and safety scanning operations.
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                {summaryData.location || 'Not set'}
               </Typography>
             </Box>
           </Box>
 
-          <Box
-            sx={{
-              px: 1.5,
-              py: 0.5,
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #86EFAC',
-              borderRadius: '6px',
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              color: '#166534',
-              flexShrink: 0,
-            }}
-          >
-            Operational
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CalendarTodayOutlinedIcon sx={{ color: colors.primary.main, fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                RIDE DATE
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                {summaryData.date || 'Not set'}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <StraightenOutlinedIcon sx={{ color: colors.primary.main, fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                TOTAL DISTANCE
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                {summaryData.distanceKm} KM
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <AccessTimeOutlinedIcon sx={{ color: colors.primary.main, fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                START TIME
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                {summaryData.startTime}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <PersonOutlineOutlinedIcon sx={{ color: colors.primary.main, fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                ORGANIZER
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                {summaryData.organizerName}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CheckCircleOutlinedIcon sx={{ color: '#059669', fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: colors.text.muted, textTransform: 'uppercase' }}>
+                EVENT STATUS
+              </Typography>
+              <RideBadge
+                status={summaryData.status === 'Active' ? 'active' : 'upcoming'}
+                label={summaryData.status}
+                size="sm"
+              />
+            </Box>
           </Box>
         </Box>
 
-        {/* Checkpoint Performance Section */}
+        {/* Performance Metrics */}
+        <Typography
+          variant="h2"
+          sx={{
+            fontSize: '1.125rem',
+            fontWeight: 800,
+            color: colors.text.primary,
+            mb: 2,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Key Rider Flow & Conversion Metrics
+        </Typography>
         <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h2"
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 800,
-              color: colors.text.primary,
-              mb: 1.5,
-            }}
-          >
-            Route Checkpoint Breakdown
-          </Typography>
-
-          <Box
-            sx={{
-              border: `1px solid ${colors.surface.border}`,
-              borderRadius: '6px',
-              overflow: 'hidden',
-            }}
-          >
-            {MOCK_REPORT_CHECKPOINTS.map((cp, idx) => (
-              <Box
-                key={cp.sequence}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 2,
-                  py: 1.25,
-                  borderBottom: idx < MOCK_REPORT_CHECKPOINTS.length - 1 ? `1px solid ${colors.surface.border}` : 0,
-                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : colors.surface.page,
-                  gap: 2,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 220 }}>
-                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 800, fontFamily: 'monospace' }}>
-                    {cp.sequence.toString().padStart(2, '0')}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-                    {cp.name}
-                  </Typography>
-                  <RideBadge status={cp.required === 'Mandatory' ? 'mandatory' : 'optional'} label={cp.required} size="sm" />
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, maxWidth: 320 }}>
-                  <Box
-                    sx={{
-                      flex: 1,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: colors.surface.subtle,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: cp.completionRate,
-                        height: '100%',
-                        backgroundColor: cp.status === 'Completed' ? '#10B981' : colors.primary.main,
-                        borderRadius: 3,
-                      }}
-                    />
-                  </Box>
-                  <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, minWidth: 70, textAlign: 'right' }}>
-                    {cp.scanned} riders ({cp.completionRate})
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
+          <ReportSummaryCards items={performanceCards} />
         </Box>
 
-        {/* Recent Activity Section */}
-        <Box>
-          <Typography
-            variant="h2"
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 800,
-              color: colors.text.primary,
-              mb: 1.5,
-            }}
-          >
-            Event Operations Audit Log
-          </Typography>
+        {/* Checkpoint Table */}
+        <Typography
+          variant="h2"
+          sx={{
+            fontSize: '1.125rem',
+            fontWeight: 800,
+            color: colors.text.primary,
+            mb: 2,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Checkpoint Waypoints & Completion Funnel
+        </Typography>
 
+        <Box
+          sx={{
+            border: `1px solid ${colors.surface.border}`,
+            borderRadius: '6px',
+            overflow: 'hidden',
+            mb: 3,
+          }}
+        >
           <Box
             sx={{
-              p: 2,
-              backgroundColor: colors.surface.page,
-              border: `1px solid ${colors.surface.border}`,
-              borderRadius: '6px',
+              display: 'grid',
+              gridTemplateColumns: '60px 2fr 1fr 1fr 1fr',
+              p: 1.5,
+              backgroundColor: colors.surface.subtle,
+              borderBottom: `1px solid ${colors.surface.border}`,
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              color: colors.text.secondary,
             }}
           >
-            {[
-              { time: '11:45 AM', text: 'Executive audit snapshot generated by Organizer Admin.' },
-              { time: '10:48 AM', text: '270th rider home safe confirmation recorded (Priya Kulkarni RT-0005).' },
-              { time: '10:35 AM', text: 'First finisher passed Destination (Sneha Joshi RT-0003 in 03h 35m).' },
-              { time: '09:40 AM', text: 'Route sweeper verified DNF for Sagar Mane at Checkpoint 1.' },
-              { time: '07:00 AM', text: 'Main peloton start signaled at CP 04 (320 riders released).' },
-            ].map((log, index) => (
+            <Box>SEQ</Box>
+            <Box>CHECKPOINT NAME</Box>
+            <Box>TYPE</Box>
+            <Box>PASSES</Box>
+            <Box>COMPLETION %</Box>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: colors.text.secondary }}>
+              Loading checkpoint funnel...
+            </Box>
+          ) : checkpoints.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: colors.text.secondary }}>
+              No checkpoints configured for this event.
+            </Box>
+          ) : (
+            checkpoints.map((cp, idx) => (
               <Box
-                key={index}
+                key={cp.checkpointId || idx}
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  py: 0.75,
-                  borderBottom: index < 4 ? `1px dashed ${colors.surface.border}` : 0,
+                  display: 'grid',
+                  gridTemplateColumns: '60px 2fr 1fr 1fr 1fr',
+                  p: 1.5,
+                  borderBottom: idx === checkpoints.length - 1 ? 'none' : `1px solid ${colors.surface.border}`,
                   fontSize: '0.8125rem',
+                  color: colors.text.primary,
+                  alignItems: 'center',
                 }}
               >
-                <CheckCircleOutlinedIcon sx={{ fontSize: 15, color: '#059669' }} />
-                <Typography sx={{ fontWeight: 700, fontFamily: 'monospace', color: colors.text.secondary }}>
-                  {log.time}
-                </Typography>
-                <Divider orientation="vertical" flexItem sx={{ height: 12, my: 'auto' }} />
-                <Typography sx={{ color: colors.text.primary }}>
-                  {log.text}
-                </Typography>
+                <Box sx={{ fontWeight: 700, color: colors.primary.main }}>
+                  CP {String(cp.sequenceNumber || idx + 1).padStart(2, '0')}
+                </Box>
+                <Box sx={{ fontWeight: 600 }}>{cp.name}</Box>
+                <Box>
+                  <RideBadge
+                    status={cp.mandatory ? 'published' : 'draft'}
+                    label={cp.mandatory ? 'Mandatory' : 'Optional'}
+                    size="sm"
+                  />
+                </Box>
+                <Box sx={{ fontWeight: 700 }}>{cp.passedCount ?? 0}</Box>
+                <Box sx={{ fontWeight: 700, color: '#059669' }}>
+                  {cp.completionPct !== undefined ? `${cp.completionPct}%` : '0%'}
+                </Box>
               </Box>
-            ))}
-          </Box>
+            ))
+          )}
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* Footer Audit Signoff */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Typography sx={{ fontSize: '0.75rem', color: colors.text.muted }}>
+            Generated by RideTrack Core Reporting Engine • Verified DB Authenticated Export
+          </Typography>
+          <RideButton variant="secondary" size="sm" onClick={onBackToReports}>
+            Return to Reports Index
+          </RideButton>
         </Box>
       </Box>
     </Box>

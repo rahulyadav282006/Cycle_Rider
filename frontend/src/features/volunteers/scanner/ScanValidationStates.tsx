@@ -7,7 +7,7 @@ import QrCodeScannerOutlinedIcon from '@mui/icons-material/QrCodeScannerOutlined
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { colors } from '../../../theme/colors';
 import { RideButton } from '../../../components/ui/RideButton';
-import { DetectedRider } from './ScannerMockData';
+import { DetectedRider } from './ScannerTypes';
 
 export interface ScanValidationStatesProps {
   type: 'duplicate' | 'invalid' | 'wrong-checkpoint';
@@ -20,7 +20,7 @@ export interface ScanValidationStatesProps {
 export const ScanValidationStates: React.FC<ScanValidationStatesProps> = ({
   type,
   rider,
-  currentCheckpoint = 'CP 06 — Lunch',
+  currentCheckpoint = 'Assigned Checkpoint',
   onScanAgain,
   onNavigateHome,
 }) => {
@@ -71,7 +71,7 @@ export const ScanValidationStates: React.FC<ScanValidationStatesProps> = ({
             }}
           >
             <Typography sx={{ fontSize: '0.9375rem', fontWeight: 700, color: '#92400E', mb: 1 }}>
-              {rider?.name || 'Rahul Patil'} has already been recorded at:
+              {rider?.name || 'Rider'} has already been recorded at:
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pl: 0.5 }}>
@@ -79,7 +79,7 @@ export const ScanValidationStates: React.FC<ScanValidationStatesProps> = ({
                 Checkpoint: <strong>{rider?.checkpoint || currentCheckpoint}</strong>
               </Typography>
               <Typography sx={{ fontSize: '0.875rem', color: '#B45309' }}>
-                Recorded at: <strong>{rider?.scanTime || '10:42 AM'}</strong>
+                Recorded at: <strong>{rider?.scanTime || 'Previously recorded'}</strong>
               </Typography>
               <Typography sx={{ fontSize: '0.8125rem', color: '#92400E', fontWeight: 700, mt: 0.5 }}>
                 Do NOT create another scan.

@@ -1,146 +1,184 @@
-import React from 'react';
-import { Box, Typography, Avatar } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Avatar, IconButton } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import { colors } from '../../theme/colors';
-import { RideIconButton } from '../ui/RideButton';
 
 export interface TopHeaderProps {
-  pageTitle: string;
+  pageTitle?: string;
   breadcrumb?: string[];
+  onToggleSidebar?: () => void;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({
-  pageTitle,
-  breadcrumb = ['RideTrack', 'System Shell'],
-}) => {
+export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
+  const [currentTime, setCurrentTime] = useState<string>(() => {
+    return new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }).toLowerCase();
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(
+        new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        }).toLowerCase()
+      );
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <Box
       component="header"
       sx={{
         height: 64,
-        backgroundColor: colors.surface.header,
-        borderBottom: `1px solid ${colors.surface.border}`,
+        backgroundColor: '#FFFFFF',
+        borderBottom: '1px solid #E2E8F0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        px: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 2, sm: 3 },
         position: 'sticky',
         top: 0,
         zIndex: 1000,
-        boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.02)',
       }}
     >
-      {/* Context & Breadcrumb Area */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        {breadcrumb && breadcrumb.length > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              color: colors.text.muted,
-              fontSize: '0.75rem',
-              lineHeight: 1,
-              mb: 0.5,
-            }}
-          >
-            {breadcrumb.map((crumb, idx) => (
-              <React.Fragment key={crumb}>
-                {idx > 0 && (
-                  <NavigateNextIcon sx={{ fontSize: 13, color: colors.text.muted }} />
-                )}
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: '0.75rem',
-                    color: idx === breadcrumb.length - 1 ? colors.text.secondary : colors.text.muted,
-                    fontWeight: idx === breadcrumb.length - 1 ? 500 : 400,
-                  }}
-                >
-                  {crumb}
-                </Typography>
-              </React.Fragment>
-            ))}
-          </Box>
-        )}
-
-        <Typography
-          variant="h2"
+      {/* Left: Hamburger menu toggle */}
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <IconButton
+          edge="start"
+          aria-label="Toggle navigation menu"
+          onClick={onToggleSidebar}
           sx={{
-            fontSize: '1.125rem',
-            fontWeight: 700,
-            color: colors.text.primary,
-            letterSpacing: '-0.01em',
-            lineHeight: 1.2,
+            color: '#475569',
+            '&:hover': {
+              backgroundColor: '#F1F5F9',
+            },
           }}
         >
-          {pageTitle}
-        </Typography>
+          <MenuIcon sx={{ fontSize: 22 }} />
+        </IconButton>
       </Box>
 
-      {/* Header Actions (Visual balance only) */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        {/* Visual Balance Action Buttons */}
-        <RideIconButton label="Notifications" size="sm" variant="default">
-          <NotificationsNoneOutlinedIcon sx={{ fontSize: 20 }} />
-        </RideIconButton>
-
-        <RideIconButton label="Help" size="sm" variant="default">
-          <HelpOutlineOutlinedIcon sx={{ fontSize: 20 }} />
-        </RideIconButton>
-
+      {/* Right: Status Pill, Clock, Bell, Help, Profile */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 } }}>
+        {/* System Online Status Badge */}
         <Box
           sx={{
-            width: '1px',
-            height: 24,
-            backgroundColor: colors.surface.border,
-            mx: 0.5,
+            display: { xs: 'none', sm: 'flex' },
+            alignItems: 'center',
+            gap: 0.85,
+            backgroundColor: '#E6F4EA',
+            color: '#065F46',
+            borderRadius: '9999px',
+            px: 1.5,
+            py: 0.45,
+            fontSize: '0.75rem',
+            fontWeight: 600,
           }}
-        />
+        >
+          <Box
+            sx={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              backgroundColor: '#10B981',
+            }}
+          />
+          System Online
+        </Box>
 
-        {/* Profile Pill */}
+        {/* Live Clock */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            gap: 0.75,
+            color: '#334155',
+            fontSize: '0.825rem',
+            fontWeight: 500,
+          }}
+        >
+          <AccessTimeOutlinedIcon sx={{ fontSize: 18, color: '#64748B' }} />
+          <span>{currentTime}</span>
+        </Box>
+
+        {/* Notification Bell */}
+        <IconButton
+          size="small"
+          aria-label="Notifications"
+          sx={{
+            color: '#475569',
+            '&:hover': {
+              backgroundColor: '#F1F5F9',
+            },
+          }}
+        >
+          <NotificationsNoneOutlinedIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+
+        {/* Help Circle */}
+        <IconButton
+          size="small"
+          aria-label="Help & Documentation"
+          sx={{
+            color: '#475569',
+            '&:hover': {
+              backgroundColor: '#F1F5F9',
+            },
+          }}
+        >
+          <HelpOutlineOutlinedIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+
+        {/* User Profile Card */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             gap: 1.25,
             pl: 0.5,
-            cursor: 'default',
           }}
         >
           <Avatar
             sx={{
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               fontSize: '0.8125rem',
               fontWeight: 700,
-              backgroundColor: colors.brand.primary,
+              backgroundColor: '#14B8A6',
               color: '#FFFFFF',
             }}
           >
-            OP
+            OA
           </Avatar>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
             <Typography
               sx={{
                 fontSize: '0.8125rem',
-                fontWeight: 600,
-                color: colors.text.primary,
-                lineHeight: 1.2,
-              }}
-            >
-              Organizer
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '0.6875rem',
-                color: colors.text.muted,
+                fontWeight: 700,
+                color: '#0F172A',
                 lineHeight: 1.2,
               }}
             >
               Organizer Admin
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.7rem',
+                color: '#64748B',
+                lineHeight: 1.2,
+              }}
+            >
+              Organizer
             </Typography>
           </Box>
         </Box>

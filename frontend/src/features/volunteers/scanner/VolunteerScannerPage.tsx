@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
-import { colors } from '../../../theme/colors';
 import { VolunteerShell } from '../VolunteerShell';
+import { PageHeroBanner } from '../../../components/common/PageHeroBanner';
 import { ScannerContextBar } from './ScannerContextBar';
 import { ScannerViewport } from './ScannerViewport';
 import { ScannerInfoIndicators } from './ScannerInfoIndicators';
@@ -14,7 +13,7 @@ import {
   ScannerState,
   DetectedRider,
   ScannerCheckpointContext,
-} from './ScannerMockData';
+} from './ScannerTypes';
 
 import { scanService, volunteerService } from '../../../api/services';
 import { saveOfflineScan, getPendingScans, flushPendingScans } from '../../../utils/offlineQueue';
@@ -48,19 +47,19 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
   });
 
   const [detectedRider, setDetectedRider] = useState<DetectedRider>({
-    name: 'Detected Rider',
-    riderId: 'RT-0001',
-    jerseyNumber: '#101',
-    checkpoint: 'Checkpoint',
-    event: 'Cycling Event',
-    scanTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    name: '',
+    riderId: '',
+    jerseyNumber: '',
+    checkpoint: '',
+    event: '',
+    scanTime: '',
   });
 
   // Load volunteer assignment & initial pending scans count
   useEffect(() => {
     getPendingScans()
       .then((scans) => setPendingSyncCount(scans.length))
-      .catch(() => {});
+      .catch(() => { });
 
     volunteerService
       .getMyAssignment()
@@ -93,15 +92,45 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
           }));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
+
+  const getDevicePosition = (): Promise<{ lat?: number; lng?: number }> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        console.warn('Geolocation is not supported by this browser.');
+        resolve({});
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => {
+          console.warn('Location capture failed:', {
+            code: err.code,
+            message: err.message,
+          });
+          // If the user denied permission, we still resolve empty so the scan can proceed
+          resolve({});
+        },
+        { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
+      );
+    });
+  };
 
   // Sync listener on reconnect
   // Automatic sync on reconnect or startup
   const syncOfflineScans = async () => {
     try {
       await flushPendingScans(async (scan) => {
-        await scanService.recordScan(scan);
+        await scanService.recordScan({
+          clientScanId: scan.clientScanId,
+          riderId: scan.riderId,
+          eventId: scan.eventId,
+          checkpointId: scan.checkpointId,
+          scanTime: scan.scanTime,
+          deviceLatitude: scan.deviceLatitude,
+          deviceLongitude: scan.deviceLongitude,
+        });
       });
       const remaining = await getPendingScans();
       setPendingSyncCount(remaining.length);
@@ -140,12 +169,12 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
     if (scannerState === 'success') {
       const timer = setTimeout(() => {
         setScannerState('ready');
-      }, 5000);
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, [scannerState]);
 
-  // Handle genuine QR scan detected by camera
+  // Step 1: Handle genuine QR scan detected by camera (Validation)
   const handleRealScan = async (rawCode: string) => {
     let cleanId = rawCode.trim();
     if (cleanId.includes('/')) {
@@ -162,48 +191,33 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
       return;
     }
 
-    const clientScanId = `scan-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const scanTimeIso = new Date().toISOString();
+    const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Check offline mode
+    // If offline, populate detected rider and prompt volunteer confirmation
     if (isOffline || !navigator.onLine) {
-      const offlinePayload = {
-        clientScanId,
-        riderId: cleanId,
-        eventId: assignmentInfo.eventId || 'ev-default',
-        checkpointId: assignmentInfo.checkpointId || 'cp-default',
-        scanTime: scanTimeIso,
-        riderName: `Rider ${cleanId}`,
-        jerseyNumber: '101',
-      };
-      await saveOfflineScan(offlinePayload);
-      const remaining = await getPendingScans();
-      setPendingSyncCount(remaining.length);
       setDetectedRider({
         name: `Rider ${cleanId}`,
         riderId: cleanId,
         jerseyNumber: '#---',
         checkpoint: assignmentInfo.context.checkpointName,
         event: assignmentInfo.context.event,
-        scanTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        scanTime: nowFormatted,
       });
-      setScannerState('success');
+      setScannerState('detected');
       return;
     }
 
-    // Online scan execution
+    // Online verification: validate rider, event, volunteer assignment, and duplicate check
     try {
-      const res = await scanService.recordScan({
-        clientScanId,
+      const res = await scanService.validateScan({
         riderId: cleanId,
         eventId: assignmentInfo.eventId,
         checkpointId: assignmentInfo.checkpointId,
-        scanTime: scanTimeIso,
       });
 
       setDetectedRider({
-        name: res.riderName || `Rider ${cleanId}`,
-        riderId: res.riderId || cleanId,
+        name: res.riderName,
+        riderId: res.riderId,
         jerseyNumber: res.jerseyNumber
           ? res.jerseyNumber.startsWith('#')
             ? res.jerseyNumber
@@ -213,7 +227,7 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
         event: res.eventName || assignmentInfo.context.event,
         scanTime: new Date(res.scanTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
-      setScannerState('success');
+      setScannerState('detected');
     } catch (err: any) {
       const errCode = err?.code || err?.error?.code || '';
       const errMsg = String(err?.message || err?.error?.message || '');
@@ -237,27 +251,94 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
       } else if (errCode === 'RIDER_NOT_FOUND' || status === 404) {
         setScannerState('invalid');
       } else {
-        // Network disruption: queue in IndexedDB
-        const offlinePayload = {
-          clientScanId,
-          riderId: cleanId,
-          eventId: assignmentInfo.eventId || 'ev-default',
-          checkpointId: assignmentInfo.checkpointId || 'cp-default',
-          scanTime: scanTimeIso,
-          riderName: `Rider ${cleanId}`,
-          jerseyNumber: '101',
-        };
-        await saveOfflineScan(offlinePayload);
-        const remaining = await getPendingScans();
-        setPendingSyncCount(remaining.length);
+        // Network drop during validation: gracefully queue for offline confirmation
         setDetectedRider({
           name: `Rider ${cleanId}`,
           riderId: cleanId,
           jerseyNumber: '#---',
           checkpoint: assignmentInfo.context.checkpointName,
           event: assignmentInfo.context.event,
-          scanTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          scanTime: nowFormatted,
         });
+        setScannerState('detected');
+      }
+    }
+  };
+
+  // Step 2: Volunteer confirms arrival (Save to MongoDB or IndexedDB)
+  const handleConfirmArrival = async () => {
+    const clientScanId = `scan-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const scanTimeIso = new Date().toISOString();
+    const coords = await getDevicePosition();
+
+    if (isOffline || !navigator.onLine) {
+      const offlinePayload = {
+        clientScanId,
+        riderId: detectedRider.riderId,
+        eventId: assignmentInfo.eventId || 'ev-default',
+        checkpointId: assignmentInfo.checkpointId || 'cp-default',
+        scannedAt: scanTimeIso,
+        scanTime: scanTimeIso,
+        status: 'pending',
+        riderName: detectedRider.name,
+        jerseyNumber: detectedRider.jerseyNumber,
+        deviceLatitude: coords.lat,
+        deviceLongitude: coords.lng,
+      };
+      await saveOfflineScan(offlinePayload);
+      const remaining = await getPendingScans();
+      setPendingSyncCount(remaining.length);
+      setScannerState('success');
+      return;
+    }
+
+    try {
+      const res = await scanService.recordScan({
+        clientScanId,
+        riderId: detectedRider.riderId,
+        eventId: assignmentInfo.eventId,
+        checkpointId: assignmentInfo.checkpointId,
+        scanTime: scanTimeIso,
+        deviceLatitude: coords.lat,
+        deviceLongitude: coords.lng,
+      });
+
+      setDetectedRider((prev) => ({
+        ...prev,
+        name: res.riderName || prev.name,
+        riderId: res.riderId || prev.riderId,
+        scanTime: new Date(res.scanTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }));
+      setScannerState('success');
+    } catch (err: any) {
+      const errCode = err?.code || err?.error?.code || '';
+      const errMsg = String(err?.message || err?.error?.message || '');
+      const status = err?.status || err?.response?.status;
+
+      if (errCode === 'DUPLICATE_SCAN' || status === 409 || errMsg.toLowerCase().includes('already')) {
+        setScannerState('duplicate');
+      } else if (errCode === 'WRONG_EVENT' || errMsg.toLowerCase().includes('different event')) {
+        setScannerState('invalid');
+      } else if (errCode === 'FORBIDDEN' || status === 403) {
+        setScannerState('wrong-checkpoint');
+      } else {
+        // Network drop during submit: queue in IndexedDB
+        const offlinePayload = {
+          clientScanId,
+          riderId: detectedRider.riderId,
+          eventId: assignmentInfo.eventId || 'ev-default',
+          checkpointId: assignmentInfo.checkpointId || 'cp-default',
+          scannedAt: scanTimeIso,
+          scanTime: scanTimeIso,
+          status: 'pending',
+          riderName: detectedRider.name,
+          jerseyNumber: detectedRider.jerseyNumber,
+          deviceLatitude: coords.lat,
+          deviceLongitude: coords.lng,
+        };
+        await saveOfflineScan(offlinePayload);
+        const remaining = await getPendingScans();
+        setPendingSyncCount(remaining.length);
         setScannerState('success');
       }
     }
@@ -276,59 +357,11 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
       }}
     >
       <Box sx={{ maxWidth: 840, mx: 'auto', width: '100%', pb: 4 }}>
-        {/* Breadcrumb & Page Title Header */}
-        <Box sx={{ mb: 2.5 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              color: colors.text.muted,
-              fontSize: '0.75rem',
-              mb: 0.5,
-            }}
-          >
-            <Typography component="span" sx={{ fontSize: '0.75rem', color: colors.text.muted }}>
-              RideTrack
-            </Typography>
-            <NavigateNextIcon sx={{ fontSize: 13, color: colors.text.muted }} />
-            <Typography
-              component="span"
-              sx={{ fontSize: '0.75rem', color: colors.text.muted, cursor: 'pointer' }}
-              onClick={onNavigateHome}
-            >
-              Volunteer Home
-            </Typography>
-            <NavigateNextIcon sx={{ fontSize: 13, color: colors.text.muted }} />
-            <Typography component="span" sx={{ fontSize: '0.75rem', color: colors.text.primary, fontWeight: 700 }}>
-              Scanner
-            </Typography>
-          </Box>
-
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '1.75rem' },
-              fontWeight: 800,
-              color: colors.text.primary,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2,
-              mb: 0.5,
-            }}
-          >
-            QR Scanner
-          </Typography>
-
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: colors.text.secondary,
-              lineHeight: 1.4,
-            }}
-          >
-            Scan rider QR codes to record checkpoint arrivals.
-          </Typography>
-        </Box>
+        {/* Panoramic Scenic Hero Banner */}
+        <PageHeroBanner
+          title="Scan Rider QR"
+          subtitle="Scan rider QR code to confirm arrival."
+        />
 
         {/* Checkpoint Context Bar */}
         <ScannerContextBar
@@ -423,7 +456,7 @@ export const VolunteerScannerPage: React.FC<VolunteerScannerPageProps> = ({
           {scannerState === 'detected' && (
             <RiderDetectedCard
               rider={detectedRider}
-              onConfirm={() => handleRealScan(detectedRider.riderId)}
+              onConfirm={handleConfirmArrival}
               onCancel={handleScanAgain}
             />
           )}

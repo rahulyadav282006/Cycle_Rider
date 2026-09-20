@@ -16,6 +16,7 @@ from backend.app.api.v1.live import router as live_router
 from backend.app.api.v1.reports import router as reports_router
 from backend.app.api.v1.admin import router as admin_router
 from backend.app.api.v1.qrcode import router as qr_router
+from backend.app.api.v1.routes import router as routes_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,12 +41,14 @@ origins = [
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://10.228.56.157:5173",
+    "https://10.228.56.157:5174",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:[0-9]+)?",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:[0-9]+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -97,6 +100,7 @@ app.include_router(live_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(qr_router, prefix="/api/v1")
+app.include_router(routes_router, prefix="/api/v1")
 
 @app.get("/track/{short_id}", tags=["QR Tracking"])
 async def track_and_redirect(short_id: str, request: Request):

@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from backend.app.core.database import get_database
@@ -9,16 +9,27 @@ from backend.app.models.schemas import UserRole
 security_scheme = HTTPBearer(auto_error=False)
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ) -> dict:
-    if not credentials:
+    token = None
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    else:
+        auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+        if auth_header:
+            parts = auth_header.strip().split()
+            if len(parts) == 2 and parts[0].lower() == "bearer":
+                token = parts[1]
+            elif len(parts) == 1 and not parts[0].lower().startswith("bearer"):
+                token = parts[0]
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "AUTH_REQUIRED", "message": "Authentication token missing or invalid"},
         )
-    
-    token = credentials.credentials
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(

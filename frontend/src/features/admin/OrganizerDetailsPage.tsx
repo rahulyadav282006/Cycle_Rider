@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,7 +34,8 @@ import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import { colors } from '../../theme/colors';
 import { RideBadge } from '../../components/ui/RideBadge';
 import { RideButton } from '../../components/ui/RideButton';
-import { MOCK_ORGANIZERS, MockOrganizer } from './mockAdminData';
+import { MockOrganizer } from './mockAdminData';
+import { adminService } from '../../api/services';
 
 export type OrganizerDetailsState = 'populated' | 'empty_events';
 
@@ -45,7 +46,7 @@ export interface OrganizerDetailsPageProps {
 }
 
 export const OrganizerDetailsPage: React.FC<OrganizerDetailsPageProps> = ({
-  organizerId = 'ORG-001',
+  organizerId = '',
   onBack,
   onViewEvent,
 }) => {
@@ -53,13 +54,61 @@ export const OrganizerDetailsPage: React.FC<OrganizerDetailsPageProps> = ({
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const organizer: MockOrganizer =
-    MOCK_ORGANIZERS.find((o) => o.id === organizerId) || MOCK_ORGANIZERS[0];
+  const [organizer, setOrganizer] = useState<MockOrganizer>({
+    id: organizerId || '',
+    name: 'Organizer',
+    email: '',
+    mobile: '',
+    organization: '',
+    eventsCount: 0,
+    activeEventsCount: 0,
+    completedEventsCount: 0,
+    totalRiders: 0,
+    status: 'Active',
+    joinedDate: '',
+    recentEvents: [],
+  });
 
   // Editable fields for Edit Organizer dialog
-  const [editName, setEditName] = useState<string>(organizer.name);
-  const [editEmail, setEditEmail] = useState<string>(organizer.email);
-  const [editStatus, setEditStatus] = useState<MockOrganizer['status']>(organizer.status);
+  const [editName, setEditName] = useState<string>('');
+  const [editEmail, setEditEmail] = useState<string>('');
+  const [editStatus, setEditStatus] = useState<MockOrganizer['status']>('Active');
+
+  useEffect(() => {
+    let isMounted = true;
+    adminService.getOrganizers().then((data) => {
+      if (!isMounted || !Array.isArray(data)) return;
+      const found = data.find((o: any) => o.id === organizerId);
+      if (found) {
+        const mapped: MockOrganizer = {
+          id: found.id,
+          name: found.name,
+          email: found.email,
+          mobile: found.mobile || '',
+          organization: found.organization || 'Independent Organizer',
+          eventsCount: found.eventsCount || 0,
+          activeEventsCount: found.activeEventsCount || 0,
+          completedEventsCount: found.completedEventsCount || 0,
+          totalRiders: found.totalRiders || 0,
+          status: found.status === 'Active' ? 'Active' : found.status === 'Inactive' ? 'Inactive' : 'Pending',
+          joinedDate: found.joinedDate || '',
+          recentEvents: (found.recentEvents || []).map((e: any) => ({
+            id: e.id,
+            name: e.name,
+            date: e.date,
+            location: e.location,
+            distance: e.distance,
+            status: (e.status === 'active' ? 'active' : e.status === 'completed' ? 'completed' : 'upcoming') as 'active' | 'upcoming' | 'completed',
+          })),
+        };
+        setOrganizer(mapped);
+        setEditName(mapped.name);
+        setEditEmail(mapped.email);
+        setEditStatus(mapped.status);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, [organizerId]);
 
   const getInitials = (name: string) => {
     return name

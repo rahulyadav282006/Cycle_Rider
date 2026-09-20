@@ -30,19 +30,13 @@ export interface EditCheckpointModalProps {
   onSavedSuccess?: () => void;
 }
 
-export type EditCheckpointVisualState =
-  | 'default'
-  | 'modified'
-  | 'validation_error'
-  | 'saving'
-  | 'success';
-
 export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
   open,
   onClose,
   onSavedSuccess,
 }) => {
-  const [visualState, setVisualState] = useState<EditCheckpointVisualState>('default');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   // Fields
   const [name, setName] = useState<string>('Lunch');
@@ -55,56 +49,18 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
     sequence?: string;
   }>({});
 
-  const handleStateChange = (state: EditCheckpointVisualState) => {
-    setVisualState(state);
-
-    if (state === 'default') {
-      setName('Lunch');
-      setType('Refreshment');
-      setSequence('06');
-      setRequirement('Optional');
-      setErrors({});
-    } else if (state === 'modified') {
-      setName('Lunch Station (Mandatory)');
-      setType('Refreshment');
-      setSequence('06');
-      setRequirement('Mandatory');
-      setErrors({});
-    } else if (state === 'validation_error') {
-      setName('');
-      setType('Refreshment');
-      setSequence('06');
-      setRequirement('Optional');
-      setErrors({
-        name: 'Checkpoint name is required.',
-      });
-    } else if (state === 'saving') {
-      setName('Lunch');
-      setType('Refreshment');
-      setSequence('06');
-      setRequirement('Optional');
-      setErrors({});
-    } else if (state === 'success') {
-      setName('Lunch');
-      setType('Refreshment');
-      setSequence('06');
-      setRequirement('Optional');
-      setErrors({});
-    }
-  };
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setErrors({ name: 'Checkpoint name is required.' });
-      setVisualState('validation_error');
       return;
     }
-    setVisualState('saving');
+    setIsSaving(true);
     setTimeout(() => {
-      setVisualState('success');
+      setIsSaving(false);
+      setIsSuccess(true);
       if (onSavedSuccess) onSavedSuccess();
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -124,58 +80,7 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
         },
       }}
     >
-      {/* State Switcher inside modal for reviewer */}
-      <Box
-        sx={{
-          backgroundColor: colors.surface.subtle,
-          borderBottom: `1px solid ${colors.surface.border}`,
-          px: 2,
-          py: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 1,
-        }}
-      >
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: colors.text.muted }}>
-          Edit Checkpoint States:
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {[
-            { id: 'default', label: 'Default' },
-            { id: 'modified', label: 'Modified' },
-            { id: 'validation_error', label: 'Error' },
-            { id: 'saving', label: 'Saving' },
-            { id: 'success', label: 'Success' },
-          ].map((st) => (
-            <Box
-              key={st.id}
-              component="button"
-              type="button"
-              onClick={() => handleStateChange(st.id as EditCheckpointVisualState)}
-              sx={{
-                px: 1,
-                py: 0.25,
-                borderRadius: '4px',
-                fontSize: '0.6875rem',
-                fontWeight: visualState === st.id ? 700 : 500,
-                cursor: 'pointer',
-                border: `1px solid ${
-                  visualState === st.id ? colors.primary.main : colors.surface.borderStrong
-                }`,
-                backgroundColor:
-                  visualState === st.id ? '#EFF6FF' : colors.surface.card,
-                color: visualState === st.id ? colors.primary.main : colors.text.secondary,
-              }}
-            >
-              {st.label}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      {visualState === 'success' ? (
+      {isSuccess ? (
         <Box sx={{ p: 4, textAlign: 'center' }}>
           <Box
             sx={{
@@ -233,7 +138,7 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
               <Box
                 component="input"
                 id="edit-checkpoint-name"
-                disabled={visualState === 'saving'}
+                disabled={isSaving}
                 value={name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setName(e.target.value);
@@ -288,7 +193,7 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
               </Typography>
               <Select
                 id="edit-checkpoint-type"
-                disabled={visualState === 'saving'}
+                disabled={isSaving}
                 value={type}
                 onChange={(e) => setType(e.target.value as CheckpointType)}
                 fullWidth
@@ -321,7 +226,7 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
               <Box
                 component="input"
                 id="edit-checkpoint-seq"
-                disabled={visualState === 'saving'}
+                disabled={isSaving}
                 value={sequence}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setSequence(e.target.value);
@@ -365,31 +270,31 @@ export const EditCheckpointModal: React.FC<EditCheckpointModalProps> = ({
                   value="Mandatory"
                   control={<Radio size="small" />}
                   label={<Typography sx={{ fontSize: '0.875rem' }}>Mandatory</Typography>}
-                  disabled={visualState === 'saving'}
+                  disabled={isSaving}
                 />
                 <FormControlLabel
                   value="Optional"
                   control={<Radio size="small" />}
                   label={<Typography sx={{ fontSize: '0.875rem' }}>Optional</Typography>}
-                  disabled={visualState === 'saving'}
+                  disabled={isSaving}
                 />
               </RadioGroup>
             </Box>
           </DialogContent>
 
           <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
-            <RideButton variant="secondary" onClick={onClose} disabled={visualState === 'saving'}>
+            <RideButton variant="secondary" onClick={onClose} disabled={isSaving}>
               Cancel
             </RideButton>
             <RideButton
               variant="primary"
               type="submit"
-              disabled={visualState === 'saving'}
+              disabled={isSaving}
               startIcon={
-                visualState === 'saving' ? <CircularProgress size={16} color="inherit" /> : undefined
+                isSaving ? <CircularProgress size={16} color="inherit" /> : undefined
               }
             >
-              {visualState === 'saving' ? 'Saving Changes...' : 'Save Changes'}
+              {isSaving ? 'Saving Changes...' : 'Save Changes'}
             </RideButton>
           </DialogActions>
         </Box>

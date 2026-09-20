@@ -33,27 +33,34 @@ export const RidersPage: React.FC<RidersPageProps> = ({
 }) => {
   const [ridersList, setRidersList] = useState<Rider[]>([]);
   const [, setEventName] = useState<string>('Event');
-  const [, setLoading] = useState<boolean>(Boolean(eventId));
+  const [, setLoading] = useState<boolean>(true);
+  const [eventsList, setEventsList] = useState<{ id: string; name: string }[]>([]);
 
-  // Load real riders from API
+  // Load real events & riders from API
   useEffect(() => {
     let isMounted = true;
-    if (!eventId) {
-      setRidersList([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
-    Promise.all([
-      eventService.getEvent(eventId).catch(() => null),
-      riderService.listRiders(eventId).catch(() => []),
-    ])
-      .then(([ev, data]) => {
+
+    const loadData = async () => {
+      try {
+        const events = await eventService.listEvents().catch(() => []);
         if (!isMounted) return;
-        if (ev) {
-          setEventName(ev.eventName);
+        const mappedEvents = events.map((e) => ({ id: e.id, name: e.eventName }));
+        setEventsList(mappedEvents);
+
+        const targetEventId = eventId || (mappedEvents.length > 0 ? mappedEvents[0].id : null);
+        if (!targetEventId) {
+          setRidersList([]);
+          setLoading(false);
+          return;
         }
+
+        const ev = events.find((e) => e.id === targetEventId);
+        if (ev) setEventName(ev.eventName);
+
+        const data = await riderService.listRiders(targetEventId).catch(() => []);
+        if (!isMounted) return;
+
         if (Array.isArray(data)) {
           const mapped: Rider[] = data.map((r: any) => ({
             id: r.riderId || r.id,
@@ -69,6 +76,8 @@ export const RidersPage: React.FC<RidersPageProps> = ({
               : r.status === 'DNF' || r.status === 'dnf'
               ? 'DNF'
               : 'Registered') as RiderStatus,
+            paymentStatus: r.paymentStatus || (r.paymentRequired ? 'pending' : 'verified'),
+            paymentRequired: r.paymentRequired !== undefined ? r.paymentRequired : Boolean(ev?.paymentRequired),
             emergencyContact: {
               name: 'Emergency Contact',
               relation: 'Family',
@@ -83,14 +92,15 @@ export const RidersPage: React.FC<RidersPageProps> = ({
         } else {
           setRidersList([]);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Failed to load riders list:', err);
         if (isMounted) setRidersList([]);
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) setLoading(false);
-      });
+      }
+    };
+
+    loadData();
 
     return () => {
       isMounted = false;
@@ -101,6 +111,47 @@ export const RidersPage: React.FC<RidersPageProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedEvent, setSelectedEvent] = useState<string>('All Events');
   const [selectedStatus, setSelectedStatus] = useState<RiderStatusFilter>('All');
+
+  // When selectedEvent changes in dropdown, fetch that event's riders
+  useEffect(() => {
+    if (!selectedEvent || selectedEvent === 'All Events' || eventsList.length === 0) return;
+    const matched = eventsList.find((e) => e.name === selectedEvent);
+    if (!matched) return;
+
+    let isMounted = true;
+    riderService.listRiders(matched.id).then((data) => {
+      if (!isMounted || !Array.isArray(data)) return;
+      const mapped: Rider[] = data.map((r: any) => ({
+        id: r.riderId || r.id,
+        name: r.name,
+        mobile: r.mobile,
+        jerseyNo: parseInt(r.jerseyNumber) || 101,
+        event: matched.name,
+        bicycleType: r.bicycleType || 'Road Bike',
+        status: (r.status === 'Completed' || r.status === 'finished'
+          ? 'Finished'
+          : r.status === 'In-Transit' || r.status === 'started'
+          ? 'Active'
+          : r.status === 'DNF' || r.status === 'dnf'
+          ? 'DNF'
+          : 'Registered') as RiderStatus,
+        paymentStatus: r.paymentStatus || (r.paymentRequired ? 'pending' : 'verified'),
+        paymentRequired: r.paymentRequired !== undefined ? r.paymentRequired : false,
+        emergencyContact: {
+          name: 'Emergency Contact',
+          relation: 'Family',
+          phone: r.emergencyContact || r.mobile,
+        },
+        bloodGroup: r.bloodGroup || 'O+',
+        registeredDate: r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString()
+          : new Date().toLocaleDateString(),
+      }));
+      setRidersList(mapped);
+    }).catch(() => {});
+
+    return () => { isMounted = false; };
+  }, [selectedEvent, eventsList]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -213,6 +264,7 @@ export const RidersPage: React.FC<RidersPageProps> = ({
               setCurrentPage(1);
             }}
             statusCounts={statusCounts}
+            eventOptions={['All Events', ...eventsList.map((e) => e.name)]}
           />
 
           {/* 3B. Main Content: Table / Cards or No Search Results */}

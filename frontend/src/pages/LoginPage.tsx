@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography } from '@mui/material';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import ErrorIcon from '@mui/icons-material/Error';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import Visibility from '@mui/icons-material/Visibility';
-import CircularProgress from '@mui/material/CircularProgress';
-import { colors } from '../theme/colors';
+import { Box, Typography, CircularProgress } from '@mui/material';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import EastIcon from '@mui/icons-material/East';
+import CheckIcon from '@mui/icons-material/Check';
 
 import { authService } from '../api/services';
 
@@ -17,8 +17,10 @@ export interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,10 +29,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
     let hasErr = false;
 
     if (!email.trim()) {
-      setEmailError('Email address is required');
-      hasErr = true;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError('Invalid email address');
+      setEmailError('Email or username is required');
       hasErr = true;
     } else {
       setEmailError('');
@@ -48,6 +47,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
     }
 
     setIsSubmitting(true);
+    setGeneralError('');
 
     try {
       const res = await authService.login({ email: email.trim(), password });
@@ -57,79 +57,118 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
       }
     } catch (err: any) {
       setIsSubmitting(false);
-      setPasswordError(err?.message || 'Invalid credentials. Please verify your email and password.');
+      setGeneralError(err?.message || 'Invalid credentials. Please verify your email and password.');
     }
   };
 
-  const isEmailInError = Boolean(emailError);
-  const isPasswordInError = Boolean(passwordError);
-
   return (
-    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-      {/* Main Authentication Card */}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: { xs: 'center', md: 'flex-end' },
+        backgroundImage: 'url("/login-bg.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: { xs: 'center center', md: 'center 42%' },
+        backgroundRepeat: 'no-repeat',
+        pr: { xs: 0, md: '6%', lg: '8%', xl: '10%' },
+        px: { xs: 2, sm: 3 },
+        py: { xs: 4, sm: 6 },
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+      }}
+    >
+      {/* Subtle overlay to enhance contrast */}
       <Box
         sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.15)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Glassmorphism Authentication Card */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: 440,
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          border: `1px solid ${colors.surface.border}`,
-          boxShadow: '0 4px 24px rgba(15, 23, 42, 0.06)',
-          p: { xs: 3, sm: 4.5 },
+          backgroundColor: 'rgba(28, 36, 44, 0.74)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.55), 0 0 1px rgba(255, 255, 255, 0.25) inset',
+          p: { xs: 3.5, sm: 4.5 },
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          color: '#FFFFFF',
         }}
       >
-        {/* Centered Cycling Brand Badge */}
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: '10px',
-            backgroundColor: colors.brand.accent,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            mb: 2.25,
-            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
-          }}
-        >
-          <DirectionsBikeIcon sx={{ fontSize: 28 }} />
+        {/* RideTrack Logo */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <Box
+            component="img"
+            src="/ridetrack-logo.png"
+            alt="RideTrack - Track · Connect · Ride Together"
+            sx={{
+              width: 220,
+              maxWidth: '100%',
+              height: 'auto',
+              display: 'block',
+              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
+            }}
+          />
         </Box>
 
-        {/* Title */}
+        {/* Title & Subtitle */}
         <Typography
           variant="h1"
           sx={{
-            fontSize: { xs: '1.25rem', sm: '1.4rem' },
-            fontWeight: 800,
-            color: colors.text.primary,
-            letterSpacing: '-0.02em',
-            textAlign: 'center',
-            mb: 1,
+            fontSize: '1.45rem',
+            fontWeight: 700,
+            color: '#FFFFFF',
+            letterSpacing: '-0.01em',
+            mb: 0.5,
             lineHeight: 1.2,
           }}
         >
-          Sign in to RideTrack
+          Welcome Back
         </Typography>
-
-        {/* Subtitle */}
         <Typography
           sx={{
-            fontSize: '0.84rem',
-            color: colors.text.secondary,
-            textAlign: 'center',
-            lineHeight: 1.45,
-            mb: 3.5,
-            maxWidth: 340,
+            fontSize: '0.86rem',
+            color: '#94A3B8',
+            lineHeight: 1.4,
+            mb: 3,
           }}
         >
-          Manage cycling events, riders, checkpoints, volunteers, and reports.
+          Sign in to your RideTrack account
         </Typography>
+
+        {/* General Error Banner */}
+        {generalError && (
+          <Box
+            id="login-error-alert"
+            sx={{
+              mb: 2.5,
+              p: 1.5,
+              borderRadius: '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.18)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#FCA5A5',
+              fontSize: '0.84rem',
+            }}
+          >
+            {generalError}
+          </Box>
+        )}
 
         {/* Login Form */}
         <Box
@@ -138,170 +177,118 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
           noValidate
           sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}
         >
-          {/* Email Address Field */}
-          <Box sx={{ mb: 2.25, width: '100%' }}>
-            <Box
-              component="label"
-              htmlFor="login-email"
-              sx={{
-                display: 'block',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                color: colors.text.primary,
-                mb: 0.75,
-              }}
-            >
-              Email Address
-            </Box>
+          {/* Email or Username Field */}
+          <Box sx={{ mb: 2, width: '100%' }}>
             <Box
               sx={{
-                position: 'relative',
+                width: '100%',
+                height: 48,
+                borderRadius: '10px',
+                backgroundColor: 'rgba(42, 53, 64, 0.65)',
+                border: `1px solid ${emailError ? '#EF4444' : 'rgba(255, 255, 255, 0.12)'}`,
                 display: 'flex',
                 alignItems: 'center',
-                width: '100%',
+                px: 2,
+                gap: 1.5,
+                boxSizing: 'border-box',
+                transition: 'all 0.2s ease',
+                '&:focus-within': {
+                  borderColor: emailError ? '#EF4444' : '#5EC576',
+                  boxShadow: emailError
+                    ? '0 0 0 2px rgba(239, 68, 68, 0.25)'
+                    : '0 0 0 2px rgba(94, 197, 118, 0.25)',
+                  backgroundColor: 'rgba(42, 53, 64, 0.85)',
+                },
               }}
             >
+              <PersonOutlineOutlinedIcon sx={{ color: '#94A3B8', fontSize: 20, flexShrink: 0 }} />
               <Box
                 component="input"
-                id="login-email"
-                type="email"
-                placeholder="organizer@example.com"
+                id="login-email-input"
+                name="email"
+                type="text"
+                placeholder="Email or Username"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (emailError) setEmailError('');
+                  if (generalError) setGeneralError('');
                 }}
                 disabled={isSubmitting}
-                aria-invalid={isEmailInError}
-                aria-describedby={isEmailInError ? 'email-error-msg' : undefined}
                 sx={{
-                  width: '100%',
-                  height: 42,
-                  px: 1.5,
-                  pr: isEmailInError ? 4.5 : 1.5,
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  color: colors.text.primary,
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${isEmailInError ? colors.status.error.dot : colors.surface.border}`,
-                  borderRadius: '6px',
+                  flex: 1,
+                  border: 'none',
                   outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                  '&:hover:not(:disabled)': {
-                    borderColor: isEmailInError ? colors.status.error.dot : colors.surface.borderStrong,
-                  },
-                  '&:focus': {
-                    borderColor: isEmailInError ? colors.status.error.dot : colors.brand.accent,
-                    boxShadow: isEmailInError
-                      ? '0 0 0 3px rgba(220, 38, 38, 0.15)'
-                      : '0 0 0 3px rgba(2, 132, 199, 0.15)',
-                  },
+                  backgroundColor: 'transparent',
+                  fontSize: '0.9rem',
+                  color: '#FFFFFF',
+                  fontFamily: 'inherit',
                   '&::placeholder': {
-                    color: colors.text.muted,
+                    color: '#94A3B8',
+                    opacity: 1,
                   },
                 }}
               />
-              {/* Red Error Icon inside input on the right */}
-              {isEmailInError && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    right: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: colors.status.error.dot,
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <ErrorIcon sx={{ fontSize: 20 }} />
-                </Box>
-              )}
             </Box>
-            {/* Error message directly below field */}
-            {isEmailInError && (
-              <Typography
-                id="email-error-msg"
-                role="alert"
-                sx={{
-                  fontSize: '0.78rem',
-                  color: colors.status.error.dot,
-                  fontWeight: 500,
-                  mt: 0.6,
-                  lineHeight: 1.3,
-                }}
-              >
+            {emailError && (
+              <Typography sx={{ color: '#EF4444', fontSize: '0.78rem', mt: 0.6, pl: 0.5 }}>
                 {emailError}
               </Typography>
             )}
           </Box>
 
           {/* Password Field */}
-          <Box sx={{ mb: 3, width: '100%' }}>
-            <Box
-              component="label"
-              htmlFor="login-password"
-              sx={{
-                display: 'block',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                color: colors.text.primary,
-                mb: 0.75,
-              }}
-            >
-              Password
-            </Box>
+          <Box sx={{ mb: 2, width: '100%' }}>
             <Box
               sx={{
-                position: 'relative',
+                width: '100%',
+                height: 48,
+                borderRadius: '10px',
+                backgroundColor: 'rgba(42, 53, 64, 0.65)',
+                border: `1px solid ${passwordError ? '#EF4444' : 'rgba(255, 255, 255, 0.12)'}`,
                 display: 'flex',
                 alignItems: 'center',
-                width: '100%',
+                px: 2,
+                gap: 1.5,
+                boxSizing: 'border-box',
+                transition: 'all 0.2s ease',
+                '&:focus-within': {
+                  borderColor: passwordError ? '#EF4444' : '#5EC576',
+                  boxShadow: passwordError
+                    ? '0 0 0 2px rgba(239, 68, 68, 0.25)'
+                    : '0 0 0 2px rgba(94, 197, 118, 0.25)',
+                  backgroundColor: 'rgba(42, 53, 64, 0.85)',
+                },
               }}
             >
+              <LockOutlinedIcon sx={{ color: '#94A3B8', fontSize: 20, flexShrink: 0 }} />
               <Box
                 component="input"
-                id="login-password"
+                id="login-password-input"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (passwordError) setPasswordError('');
+                  if (generalError) setGeneralError('');
                 }}
                 disabled={isSubmitting}
-                aria-invalid={isPasswordInError}
-                aria-describedby={isPasswordInError ? 'password-error-msg' : undefined}
                 sx={{
-                  width: '100%',
-                  height: 42,
-                  px: 1.5,
-                  pr: 4.5,
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  color: colors.text.primary,
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${isPasswordInError ? colors.status.error.dot : colors.surface.border}`,
-                  borderRadius: '6px',
+                  flex: 1,
+                  border: 'none',
                   outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                  '&:hover:not(:disabled)': {
-                    borderColor: isPasswordInError ? colors.status.error.dot : colors.surface.borderStrong,
-                  },
-                  '&:focus': {
-                    borderColor: isPasswordInError ? colors.status.error.dot : colors.brand.accent,
-                    boxShadow: isPasswordInError
-                      ? '0 0 0 3px rgba(220, 38, 38, 0.15)'
-                      : '0 0 0 3px rgba(2, 132, 199, 0.15)',
-                  },
+                  backgroundColor: 'transparent',
+                  fontSize: '0.9rem',
+                  color: '#FFFFFF',
+                  fontFamily: 'inherit',
                   '&::placeholder': {
-                    color: colors.text.muted,
+                    color: '#94A3B8',
+                    opacity: 1,
                   },
                 }}
               />
-              {/* Show/Hide password toggle icon button */}
               <Box
                 component="button"
                 type="button"
@@ -309,62 +296,113 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
                 disabled={isSubmitting}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 sx={{
-                  position: 'absolute',
-                  right: 8,
                   border: 'none',
                   background: 'none',
                   p: 0.5,
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: colors.text.muted,
-                  borderRadius: '4px',
-                  '&:hover': {
-                    color: colors.text.primary,
-                  },
-                  '&:focus-visible': {
-                    outline: `2px solid ${colors.brand.accent}`,
-                  },
+                  color: '#94A3B8',
+                  transition: 'color 0.15s ease',
+                  '&:hover': { color: '#FFFFFF' },
                 }}
               >
                 {showPassword ? (
-                  <Visibility sx={{ fontSize: 20 }} />
+                  <VisibilityOutlinedIcon sx={{ fontSize: 19 }} />
                 ) : (
-                  <VisibilityOff sx={{ fontSize: 20 }} />
+                  <VisibilityOffOutlinedIcon sx={{ fontSize: 19 }} />
                 )}
               </Box>
             </Box>
-            {/* Error message directly below field */}
-            {isPasswordInError && (
-              <Typography
-                id="password-error-msg"
-                role="alert"
-                sx={{
-                  fontSize: '0.78rem',
-                  color: colors.status.error.dot,
-                  fontWeight: 500,
-                  mt: 0.6,
-                  lineHeight: 1.3,
-                }}
-              >
+            {passwordError && (
+              <Typography sx={{ color: '#EF4444', fontSize: '0.78rem', mt: 0.6, pl: 0.5 }}>
                 {passwordError}
               </Typography>
             )}
+          </Box>
+
+          {/* Options Row: Remember Me & Forgot Password */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mt: 0.5,
+              mb: 3,
+              width: '100%',
+            }}
+          >
+            {/* Remember Me Checkbox */}
+            <Box
+              component="div"
+              onClick={() => setRememberMe(!rememberMe)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: '5px',
+                  backgroundColor: rememberMe ? '#5EC576' : 'transparent',
+                  border: rememberMe ? '1px solid #5EC576' : '1px solid rgba(255, 255, 255, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {rememberMe && <CheckIcon sx={{ fontSize: 14, color: '#FFFFFF' }} />}
+              </Box>
+              <Typography sx={{ fontSize: '0.85rem', color: '#E2E8F0', fontWeight: 500 }}>
+                Remember me
+              </Typography>
+            </Box>
+
+            {/* Forgot Password */}
+            <Typography
+              component="button"
+              type="button"
+              onClick={() => alert('Please contact administrator to reset your password.')}
+              sx={{
+                background: 'none',
+                border: 'none',
+                p: 0,
+                color: '#5EC576',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'color 0.15s ease',
+                '&:hover': {
+                  color: '#4ADE80',
+                  textDecoration: 'underline',
+                },
+              }}
+            >
+              Forgot password?
+            </Typography>
           </Box>
 
           {/* Full-width Sign In Button */}
           <Box
             component="button"
             type="submit"
+            id="login-submit-button"
             disabled={isSubmitting}
             sx={{
               width: '100%',
-              height: 46,
-              borderRadius: '6px',
-              backgroundColor: colors.brand.accent,
+              height: 48,
+              borderRadius: '10px',
+              background: 'linear-gradient(180deg, #66D27E 0%, #54C26E 100%)',
               color: '#FFFFFF',
-              fontSize: '0.9375rem',
+              fontSize: '0.96rem',
               fontWeight: 600,
               fontFamily: 'inherit',
               border: 'none',
@@ -373,19 +411,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
               alignItems: 'center',
               justifyContent: 'center',
               gap: 1.25,
-              transition: 'background-color 0.15s ease, transform 0.1s ease',
+              boxShadow: '0 4px 14px rgba(84, 194, 110, 0.35)',
+              transition: 'all 0.15s ease',
               '&:hover:not(:disabled)': {
-                backgroundColor: colors.brand.accentHover,
+                background: 'linear-gradient(180deg, #57C36F 0%, #4AB764 100%)',
+                boxShadow: '0 6px 20px rgba(84, 194, 110, 0.5)',
+                transform: 'translateY(-1px)',
               },
               '&:active:not(:disabled)': {
                 transform: 'translateY(1px)',
               },
-              '&:focus-visible': {
-                outline: `2px solid ${colors.brand.accent}`,
-                outlineOffset: '2px',
-              },
               '&:disabled': {
-                backgroundColor: '#94A3B8',
+                opacity: 0.65,
                 cursor: 'not-allowed',
               },
             }}
@@ -396,7 +433,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
                 <span>Signing In...</span>
               </>
             ) : (
-              'Sign In'
+              <>
+                <span>Sign In</span>
+                <EastIcon sx={{ fontSize: 18 }} />
+              </>
             )}
           </Box>
 
@@ -409,60 +449,56 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
               width: '100%',
             }}
           >
-            <Box sx={{ flex: 1, height: '1px', backgroundColor: colors.surface.border }} />
+            <Box sx={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
             <Typography
               sx={{
                 px: 2,
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                color: colors.text.muted,
+                color: '#94A3B8',
                 letterSpacing: '0.06em',
-                textTransform: 'uppercase',
               }}
             >
               OR
             </Typography>
-            <Box sx={{ flex: 1, height: '1px', backgroundColor: colors.surface.border }} />
+            <Box sx={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
           </Box>
 
-          {/* Registration Secondary Navigation */}
+          {/* Registration Link */}
           <Box
             sx={{
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              gap: 0.5,
+              justifyContent: 'center',
+              gap: 0.75,
               textAlign: 'center',
             }}
           >
-            <Typography sx={{ fontSize: '0.8125rem', color: colors.text.secondary }}>
-              Don't have an organizer account?
+            <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>
+              Don't have an account?
             </Typography>
             <Box
               component="button"
               type="button"
+              id="link-register"
               onClick={onNavigateRegister}
               sx={{
                 background: 'none',
                 border: 'none',
                 p: 0,
-                color: colors.brand.accent,
-                fontSize: '0.875rem',
+                color: '#5EC576',
+                fontSize: '0.85rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
+                transition: 'color 0.15s ease',
                 '&:hover': {
-                  color: colors.brand.accentHover,
+                  color: '#4ADE80',
                   textDecoration: 'underline',
-                },
-                '&:focus-visible': {
-                  outline: `2px solid ${colors.brand.accent}`,
-                  outlineOffset: '2px',
-                  borderRadius: '2px',
                 },
               }}
             >
-              Create Organizer Account
+              Register
             </Box>
           </Box>
         </Box>

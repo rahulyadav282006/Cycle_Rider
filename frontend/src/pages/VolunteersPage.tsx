@@ -326,6 +326,8 @@ export const VolunteersPage: React.FC<VolunteersPageProps> = ({ eventId }) => {
               selectedCheckpoint !== 'All Checkpoints' ||
               selectedStatus !== 'All'
             }
+            eventOptions={availableEvents.map((e) => e.name)}
+            checkpointOptions={availableCheckpoints.map((cp) => cp.name)}
           />
 
           {/* 3B. Content Area: Table / Cards or No Results */}

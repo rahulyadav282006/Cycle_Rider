@@ -127,7 +127,47 @@ def test_full_scans_and_checkpoint_workflow():
         assert timeline[0]["status"] == "Completed"
         assert timeline[0]["time"] == "2026-10-15T06:15:00Z"
 
-        # 11. Invalid Rider Check: Submitting non-existent rider returns 404
+        # 11. Validation Endpoint (Preview before confirmation)
+        # 11a. Validate CP2 for same rider (allowed, not yet scanned at CP2)
+        val_cp2_res = client.post("/api/v1/scans/validate", json={
+            "riderId": rider_id,
+            "eventId": event_id,
+            "checkpointId": cp2_id,
+        }, headers=org_headers)
+        assert val_cp2_res.status_code == 200
+        val_data = val_cp2_res.json()["data"]
+        assert val_data["riderId"] == rider_id
+        assert val_data["riderName"] == f"Scanner Test Rider {unique_suffix}"
+        assert val_data["checkpointId"] == cp2_id
+        assert val_data["checkpointName"] == "Breakfast Checkpoint"
+
+        # 11b. Validate CP1 for same rider (already scanned -> 409 DUPLICATE_SCAN)
+        val_dup_res = client.post("/api/v1/scans/validate", json={
+            "riderId": rider_id,
+            "eventId": event_id,
+            "checkpointId": cp1_id,
+        }, headers=org_headers)
+        assert val_dup_res.status_code == 409
+        assert val_dup_res.json()["error"]["code"] == "DUPLICATE_SCAN"
+
+        # 11c. Progress to CP2: Confirm arrival at CP2 -> 200 OK
+        client_scan_id_2 = f"client-scan-{uuid.uuid4().hex}"
+        cp2_scan_res = client.post("/api/v1/scans", json={
+            "clientScanId": client_scan_id_2,
+            "riderId": rider_id,
+            "eventId": event_id,
+            "checkpointId": cp2_id,
+            "scanTime": "2026-10-15T08:30:00Z",
+        }, headers=org_headers)
+        assert cp2_scan_res.status_code == 200
+        assert cp2_scan_res.json()["data"]["status"] == "Recorded"
+
+        # Both checkpoints now Completed in rider profile timeline
+        final_profile = client.get(f"/api/v1/riders/{rider_data['id']}", headers=org_headers).json()["data"]
+        assert final_profile["timeline"][0]["status"] == "Completed"
+        assert final_profile["timeline"][1]["status"] == "Completed"
+
+        # 12. Invalid Rider Check: Submitting non-existent rider returns 404
         bad_scan_payload = {
             "clientScanId": f"client-scan-{uuid.uuid4().hex}",
             "riderId": "RT-NONEXISTENT",
@@ -136,3 +176,28 @@ def test_full_scans_and_checkpoint_workflow():
         }
         bad_res = client.post("/api/v1/scans", json=bad_scan_payload, headers=org_headers)
         assert bad_res.status_code == 404
+        assert bad_res.json()["error"]["code"] == "RIDER_NOT_FOUND"
+
+        # 13. Wrong Event Validation: Scan rider against a different event returns 400 WRONG_EVENT
+        wrong_event_res = client.post("/api/v1/events", json={
+            "eventName": f"Other Event {unique_suffix}",
+            "location": "Pune",
+            "rideDistance": 50,
+            "rideDate": "2026-10-20",
+            "startTime": "07:00 AM",
+        }, headers=org_headers)
+        assert wrong_event_res.status_code == 200
+        other_event_id = wrong_event_res.json()["data"]["id"]
+
+        other_cp_res = client.post(f"/api/v1/events/{other_event_id}/checkpoints", json={
+            "name": "Other CP", "type": "Start", "sequenceNumber": 1, "mandatory": True,
+        }, headers=org_headers)
+        other_cp_id = other_cp_res.json()["data"]["id"]
+
+        wrong_event_scan = client.post("/api/v1/scans/validate", json={
+            "riderId": rider_id,
+            "eventId": other_event_id,
+            "checkpointId": other_cp_id,
+        }, headers=org_headers)
+        assert wrong_event_scan.status_code == 400
+        assert wrong_event_scan.json()["error"]["code"] == "WRONG_EVENT"

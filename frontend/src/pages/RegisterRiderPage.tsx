@@ -45,6 +45,8 @@ export const RegisterRiderPage: React.FC<RegisterRiderPageProps> = ({
     name: string;
     event: string;
     jerseyNumber: string;
+    paymentStatus?: string;
+    paymentRequired?: boolean;
   }>({
     riderId: '',
     name: '',
@@ -234,6 +236,8 @@ export const RegisterRiderPage: React.FC<RegisterRiderPageProps> = ({
         name: created.name,
         event: formData.event,
         jerseyNumber: String(created.jerseyNumber || formData.jerseyNumber),
+        paymentStatus: created.paymentStatus,
+        paymentRequired: created.paymentRequired,
       });
       setIsSuccess(true);
     } catch (err: any) {

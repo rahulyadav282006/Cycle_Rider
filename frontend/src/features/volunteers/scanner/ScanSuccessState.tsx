@@ -8,7 +8,7 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import { colors } from '../../../theme/colors';
 import { RideButton } from '../../../components/ui/RideButton';
-import { DetectedRider } from './ScannerMockData';
+import { DetectedRider } from './ScannerTypes';
 
 export interface ScanSuccessStateProps {
   rider: DetectedRider;

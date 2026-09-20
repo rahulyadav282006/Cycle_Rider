@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -17,9 +17,8 @@ import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined
 import { colors } from '../../theme/colors';
 import { RideButton } from '../../components/ui/RideButton';
 import { RideBadge } from '../../components/ui/RideBadge';
-import {
-  MOCK_ORGANIZERS,
-} from './mockAdminData';
+import { MockOrganizer } from './mockAdminData';
+import { adminService } from '../../api/services';
 
 export interface PlatformReportDetailProps {
   onBack: () => void;
@@ -27,6 +26,30 @@ export interface PlatformReportDetailProps {
 
 export const PlatformReportDetail: React.FC<PlatformReportDetailProps> = ({ onBack }) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [organizers, setOrganizers] = useState<MockOrganizer[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    adminService.getOrganizers().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setOrganizers(data.map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          email: o.email,
+          mobile: o.mobile || '',
+          organization: o.organization || 'Independent Organizer',
+          eventsCount: o.eventsCount || 0,
+          activeEventsCount: o.activeEventsCount || 0,
+          completedEventsCount: o.completedEventsCount || 0,
+          totalRiders: o.totalRiders || 0,
+          status: o.status === 'Active' ? 'Active' : o.status === 'Inactive' ? 'Inactive' : 'Pending',
+          joinedDate: o.joinedDate || '',
+          recentEvents: o.recentEvents || [],
+        })));
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const handleExport = (format: 'CSV' | 'Excel') => {
     setToastMessage(`Exporting Platform Summary Report as ${format}...`);
@@ -290,35 +313,41 @@ export const PlatformReportDetail: React.FC<PlatformReportDetailProps> = ({ onBa
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+              gridTemplateColumns: organizers.length > 0 ? { xs: '1fr', md: 'repeat(3, 1fr)' } : '1fr',
               gap: 2,
             }}
           >
-            {MOCK_ORGANIZERS.slice(0, 3).map((org) => (
-              <Box
-                key={org.id}
-                sx={{
-                  p: 2,
-                  borderRadius: '8px',
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${colors.surface.border}`,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
-                    {org.name}
+            {organizers.length === 0 ? (
+              <Typography sx={{ fontSize: '0.875rem', color: colors.text.muted, py: 2 }}>
+                No organizers registered yet
+              </Typography>
+            ) : (
+              organizers.slice(0, 3).map((org) => (
+                <Box
+                  key={org.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: '8px',
+                    backgroundColor: '#FFFFFF',
+                    border: `1px solid ${colors.surface.border}`,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: colors.text.primary }}>
+                      {org.name}
+                    </Typography>
+                    <RideBadge status={org.status === 'Active' ? 'active' : 'pending'} size="sm" />
+                  </Box>
+                  <Typography sx={{ fontSize: '0.75rem', color: colors.text.secondary, mb: 1 }}>
+                    {org.organization}
                   </Typography>
-                  <RideBadge status={org.status === 'Active' ? 'active' : 'pending'} size="sm" />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: colors.text.muted }}>
+                    <span>{org.eventsCount} Events Organised</span>
+                    <span>{org.totalRiders.toLocaleString()} Riders</span>
+                  </Box>
                 </Box>
-                <Typography sx={{ fontSize: '0.75rem', color: colors.text.secondary, mb: 1 }}>
-                  {org.organization}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: colors.text.muted }}>
-                  <span>{org.eventsCount} Events Organised</span>
-                  <span>{org.totalRiders.toLocaleString()} Riders</span>
-                </Box>
-              </Box>
-            ))}
+              ))
+            )}
           </Box>
         </Box>
 

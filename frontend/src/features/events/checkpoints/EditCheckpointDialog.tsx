@@ -36,14 +36,17 @@ export const EditCheckpointDialog: React.FC<EditCheckpointDialogProps> = ({
           type: checkpoint.type,
           sequence: checkpoint.sequence.toString().padStart(2, '0'),
           requirement: checkpoint.requirement,
+          latitude: checkpoint.latitude !== undefined ? String(checkpoint.latitude) : '',
+          longitude: checkpoint.longitude !== undefined ? String(checkpoint.longitude) : '',
         });
       } else {
-        // Default example populated data per spec:
         setFormData({
-          name: 'Lunch',
-          type: 'Refreshment',
-          sequence: '06',
-          requirement: 'Optional',
+          name: '',
+          type: 'Checkpoint',
+          sequence: '01',
+          requirement: 'Mandatory',
+          latitude: '',
+          longitude: '',
         });
       }
       setErrors({});
@@ -84,6 +87,8 @@ export const EditCheckpointDialog: React.FC<EditCheckpointDialogProps> = ({
         type: formData.type as CheckpointType,
         sequence: Number(formData.sequence),
         requirement: formData.requirement,
+        latitude: formData.latitude && !isNaN(Number(formData.latitude)) ? Number(formData.latitude) : undefined,
+        longitude: formData.longitude && !isNaN(Number(formData.longitude)) ? Number(formData.longitude) : undefined,
       });
     }
     onClose();

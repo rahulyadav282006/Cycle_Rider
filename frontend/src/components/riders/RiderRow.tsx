@@ -135,7 +135,24 @@ export const RiderRow: React.FC<RiderRowProps> = ({ rider, onViewRider }) => {
 
       {/* 7. Status */}
       <TableCell sx={{ py: 2, px: 2 }}>
-        <RiderStatusBadge status={rider.status} size="sm" />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
+          <RiderStatusBadge status={rider.status} size="sm" />
+          <Box
+            component="span"
+            sx={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              px: 0.75,
+              py: 0.2,
+              borderRadius: '3px',
+              backgroundColor: rider.paymentStatus === 'verified' ? '#ECFDF5' : '#FFFBEB',
+              color: rider.paymentStatus === 'verified' ? '#065F46' : '#92400E',
+              border: `1px solid ${rider.paymentStatus === 'verified' ? '#A7F3D0' : '#FDE68A'}`,
+            }}
+          >
+            {rider.paymentStatus === 'verified' ? 'Paid' : 'Pending'}
+          </Box>
+        </Box>
       </TableCell>
 
       {/* 8. Action */}

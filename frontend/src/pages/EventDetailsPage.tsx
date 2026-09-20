@@ -15,11 +15,13 @@ import { VolunteerAssignmentCard } from '../components/events/details/VolunteerA
 import { RecentActivityCard } from '../components/events/details/RecentActivityCard';
 import { EventDetailsEmptyState } from '../components/events/details/EventDetailsEmptyState';
 import { ArchiveEventDialog } from '../components/events/details/ArchiveEventDialog';
+import { CheckpointRouteTimeline } from '../components/routes/CheckpointRouteTimeline';
 import { colors } from '../theme/colors';
-import { eventService, checkpointService, riderService, volunteerService } from '../api/services';
+import { eventService, checkpointService, riderService, volunteerService, RoutePoint, CheckpointItem } from '../api/services';
 
 export interface EventDetailsPageProps {
   eventId?: string;
+  onEventLoaded?: (name: string) => void;
   onNavigateEditEvent: () => void;
   onNavigateCheckpoints: () => void;
   onNavigateRiders: () => void;
@@ -31,6 +33,7 @@ export interface EventDetailsPageProps {
 
 export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
   eventId,
+  onEventLoaded,
   onNavigateEditEvent,
   onNavigateCheckpoints,
   onNavigateRiders,
@@ -44,6 +47,7 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(Boolean(eventId));
 
+  const [checkpointsList, setCheckpointsList] = useState<CheckpointItem[]>([]);
   const [eventData, setEventData] = useState<{
     id: string;
     name: string;
@@ -54,6 +58,10 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
     startTime: string;
     organizer: string;
     description: string;
+    routePoints?: RoutePoint[];
+    routeGeometry?: [number, number][];
+    startLocation?: { name: string; lat: number; lng: number } | null;
+    finishLocation?: { name: string; lat: number; lng: number } | null;
     metrics: {
       registeredRiders: number;
       startedRiders: number;
@@ -81,6 +89,8 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
     startTime: '',
     organizer: '',
     description: '',
+    routePoints: [],
+    routeGeometry: [],
     metrics: {
       registeredRiders: 0,
       startedRiders: 0,
@@ -122,6 +132,10 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
           return;
         }
 
+        if (onEventLoaded && ev.eventName) {
+          onEventLoaded(ev.eventName);
+        }
+
         const registeredCount = riders.length;
         const startedCount = riders.filter((r: any) => r.status === 'started' || r.status === 'finished').length;
         const finishedCount = riders.filter((r: any) => r.status === 'finished').length;
@@ -129,10 +143,12 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
         const homeSafeCount = riders.filter((r: any) => r.status === 'home_safe' || r.status === 'finished').length;
 
         const totalCp = checkpoints.length;
-        const mandatoryCp = checkpoints.filter((c: any) => c.isMandatory).length;
+        const mandatoryCp = checkpoints.filter((c: any) => c.isMandatory || c.mandatory).length;
         const optionalCp = totalCp - mandatoryCp;
 
         const assignedVolunteers = volunteers.filter((v: any) => Boolean(v.checkpointId || v.assignedCheckpointId)).length;
+
+        setCheckpointsList(checkpoints || []);
 
         setEventData({
           id: ev.id,
@@ -144,6 +160,10 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
           startTime: ev.startTime || '',
           organizer: ev.organizerName || 'Organizer Admin',
           description: ev.description || '',
+          routePoints: ev.routePoints || [],
+          routeGeometry: ev.routeGeometry || [],
+          startLocation: ev.startLocation || null,
+          finishLocation: ev.finishLocation || null,
           metrics: {
             registeredRiders: registeredCount,
             startedRiders: startedCount,
@@ -173,7 +193,7 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [eventId]);
+  }, [eventId, onEventLoaded]);
 
   const handleTabChange = (tab: EventTabType) => {
     setActiveTab(tab);
@@ -296,7 +316,17 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({
             />
           </Box>
 
-          {/* Row 3: Recent Activity */}
+          {/* Row 3: Checkpoint Route Timeline */}
+          <CheckpointRouteTimeline
+            readOnly={true}
+            startLocation={eventData.startLocation}
+            finishLocation={eventData.finishLocation}
+            checkpoints={checkpointsList}
+            title={`${eventData.name || 'Event'} — Route Checkpoints Sequence`}
+            subtitle="Sequential route progression from START to FINISH"
+          />
+
+          {/* Row 4: Recent Activity */}
           <RecentActivityCard activities={eventData.recentActivities} />
         </Box>
       )}

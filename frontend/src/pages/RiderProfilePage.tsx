@@ -10,8 +10,11 @@ import { RiderProfileActions } from '../components/riders/RiderProfileActions';
 import { EditRiderModal } from '../components/riders/EditRiderModal';
 import { RiderProfileData } from '../components/riders/mockRiderProfileData';
 import { RiderStatus } from '../components/riders/mockRidersData';
-import { riderService } from '../api/services';
+import { riderService, eventService } from '../api/services';
 import { colors } from '../theme/colors';
+import { RideButton } from '../components/ui/RideButton';
+import PaymentOutlinedIcon from '@mui/icons-material/PaymentOutlined';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 
 export interface RiderProfilePageProps {
   riderId?: string;
@@ -25,6 +28,7 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
   const [profile, setProfile] = useState<RiderProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(Boolean(riderId));
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [verifyingPayment, setVerifyingPayment] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -32,7 +36,9 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
       setLoading(true);
       riderService
         .getRider(riderId)
-        .then((r) => {
+        .then(async (r) => {
+          if (!isMounted) return;
+          const ev = r.eventId ? await eventService.getEvent(r.eventId).catch(() => null) : null;
           if (!isMounted) return;
           setProfile({
             id: r.riderId || r.id,
@@ -45,8 +51,8 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
             club: r.club || 'Independent',
             bicycleType: r.bicycleType || 'Road Bike',
             jerseyNumber: r.jerseyNumber || 101,
-            event: 'Cycling Event',
-            rideDistance: '200 km',
+            event: ev?.eventName || 'Cycling Event',
+            rideDistance: ev?.rideDistance ? `${ev.rideDistance} km` : '',
             status: (r.status === 'Completed' || r.status === 'finished'
               ? 'Finished'
               : r.status === 'In-Transit' || r.status === 'started'
@@ -54,6 +60,8 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
               : r.status === 'DNF' || r.status === 'dnf'
               ? 'DNF'
               : 'Registered') as RiderStatus,
+            paymentStatus: r.paymentStatus || (r.paymentRequired ? 'pending' : 'verified'),
+            paymentRequired: r.paymentRequired !== undefined ? r.paymentRequired : false,
             medicalNotes: r.medicalNotes || 'No known medical information provided.',
             timeline: (r.timeline || []).map((t: any) => ({
               sequence: t.sequence || '01',
@@ -79,6 +87,32 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
       isMounted = false;
     };
   }, [riderId]);
+
+  const handleVerifyPayment = async () => {
+    if (!profile) return;
+    setVerifyingPayment(true);
+    try {
+      await riderService.updatePaymentStatus(profile.id, 'verified');
+      setProfile((prev) => (prev ? { ...prev, paymentStatus: 'verified' } : null));
+    } catch (err) {
+      console.error('Failed to verify payment:', err);
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  const handleMarkPending = async () => {
+    if (!profile) return;
+    setVerifyingPayment(true);
+    try {
+      await riderService.updatePaymentStatus(profile.id, 'pending');
+      setProfile((prev) => (prev ? { ...prev, paymentStatus: 'pending' } : null));
+    } catch (err) {
+      console.error('Failed to mark payment pending:', err);
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -121,6 +155,107 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
       {/* 2. Prominent Rider Summary Card */}
       <RiderSummaryCard profile={profile} />
 
+      {/* Organizer Payment Verification Action Banner */}
+      {profile.paymentStatus === 'pending' && (
+        <Box
+          id="organizer-payment-verification-banner"
+          sx={{
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FCD34D',
+            borderRadius: '8px',
+            p: 2.5,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            justifyContent: 'space-between',
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: '#FEF3C7',
+                color: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <PaymentOutlinedIcon sx={{ fontSize: 22 }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '0.9375rem', color: '#92400E' }}>
+                Payment Verification Pending
+              </Typography>
+              <Typography sx={{ fontSize: '0.8125rem', color: '#B45309' }}>
+                Rider payment is currently marked as pending. Mark as paid / verified below.
+              </Typography>
+            </Box>
+          </Box>
+
+          <RideButton
+            id="btn-verify-payment"
+            variant="primary"
+            size="sm"
+            disabled={verifyingPayment}
+            onClick={handleVerifyPayment}
+            sx={{
+              minWidth: 180,
+              fontWeight: 700,
+              backgroundColor: '#059669',
+              '&:hover': { backgroundColor: '#047857' },
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {verifyingPayment ? 'Verifying...' : 'Mark as Paid / Verified'}
+          </RideButton>
+        </Box>
+      )}
+
+      {profile.paymentStatus === 'verified' && (
+        <Box
+          id="organizer-payment-verified-banner"
+          sx={{
+            backgroundColor: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            borderRadius: '8px',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.5,
+            mb: 3,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CheckCircleOutlinedIcon sx={{ fontSize: 22, color: '#059669' }} />
+            <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#065F46' }}>
+              Payment Status: Paid / Verified — QR Timing Pass is Active
+            </Typography>
+          </Box>
+          <RideButton
+            id="btn-mark-pending"
+            variant="secondary"
+            size="sm"
+            disabled={verifyingPayment}
+            onClick={handleMarkPending}
+            sx={{
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {verifyingPayment ? 'Updating...' : 'Mark as Pending'}
+          </RideButton>
+        </Box>
+      )}
+
       {/* 3. Main Content: 2-Column Responsive Layout */}
       <Box
         sx={{
@@ -143,7 +278,11 @@ export const RiderProfilePage: React.FC<RiderProfilePageProps> = ({
 
         {/* Right Column: QR Code Card & Ride Timeline */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2.5, sm: 3 } }}>
-          <RiderQRCodeCard riderId={profile.id} />
+          <RiderQRCodeCard
+            riderId={profile.id}
+            paymentRequired={profile.paymentRequired}
+            paymentStatus={profile.paymentStatus}
+          />
 
           <RiderTimeline timeline={profile.timeline} />
         </Box>

@@ -81,6 +81,8 @@ export const AddCheckpointDialog: React.FC<AddCheckpointDialogProps> = ({
       type: formData.type as CheckpointType,
       sequence: Number(formData.sequence),
       requirement: formData.requirement,
+      latitude: formData.latitude && !isNaN(Number(formData.latitude)) ? Number(formData.latitude) : undefined,
+      longitude: formData.longitude && !isNaN(Number(formData.longitude)) ? Number(formData.longitude) : undefined,
     });
     onClose();
   };

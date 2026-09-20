@@ -1,9 +1,8 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import { colors } from '../../../theme/colors';
-import { RideButton } from '../../../components/ui/RideButton';
 
 export interface EmptyCheckpointStateProps {
   onAddCheckpoint: () => void;
@@ -17,10 +16,10 @@ export const EmptyCheckpointState: React.FC<EmptyCheckpointStateProps> = ({
       sx={{
         backgroundColor: colors.surface.card,
         border: `1px solid ${colors.surface.border}`,
-        borderRadius: '8px',
-        p: { xs: 4, sm: 6 },
+        borderRadius: '14px',
+        p: { xs: 6, sm: 8 },
         textAlign: 'center',
-        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -30,57 +29,74 @@ export const EmptyCheckpointState: React.FC<EmptyCheckpointStateProps> = ({
       {/* Icon */}
       <Box
         sx={{
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           borderRadius: '50%',
-          backgroundColor: colors.brand.accentLight,
-          color: colors.primary.main,
+          backgroundColor: '#D1FAE5',
+          color: '#0F766E',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           mb: 2.5,
-          boxShadow: '0 2px 4px 0 rgba(2, 132, 199, 0.08)',
         }}
       >
-        <AddLocationAltOutlinedIcon sx={{ fontSize: 30 }} />
+        <PlaceOutlinedIcon sx={{ fontSize: 32 }} />
       </Box>
 
       {/* Title */}
       <Typography
         variant="h2"
         sx={{
-          fontSize: { xs: '1.125rem', sm: '1.25rem' },
+          fontSize: { xs: '1.25rem', sm: '1.375rem' },
           fontWeight: 800,
           color: colors.text.primary,
-          letterSpacing: '-0.01em',
+          letterSpacing: '-0.02em',
           mb: 1,
         }}
       >
-        No checkpoints configured
+        No checkpoints found
       </Typography>
 
       {/* Description */}
       <Typography
         sx={{
           fontSize: '0.875rem',
-          color: colors.text.secondary,
-          maxWidth: 460,
+          color: colors.text.muted,
+          maxWidth: 420,
           lineHeight: 1.5,
           mb: 3,
         }}
       >
-        This event does not have any checkpoints yet. Add checkpoints to define the
-        rider route and scanning sequence.
+        Create checkpoints for your event.
       </Typography>
 
       {/* Primary Action */}
-      <RideButton
-        variant="primary"
+      <Box
+        component="button"
+        type="button"
         onClick={onAddCheckpoint}
-        startIcon={<AddOutlinedIcon sx={{ fontSize: 18 }} />}
+        sx={{
+          minHeight: 44,
+          px: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1,
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: '#135F63',
+          color: '#FFFFFF',
+          fontSize: '0.875rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          '&:hover': {
+            backgroundColor: '#0E484B',
+          },
+        }}
       >
-        Add Checkpoint
-      </RideButton>
+        <AddOutlinedIcon sx={{ fontSize: 18 }} />
+        New Checkpoint
+      </Box>
     </Box>
   );
 };

@@ -6,10 +6,7 @@ import { QuickActions } from '../components/dashboard/QuickActions';
 import { MetricCard } from '../components/dashboard/MetricCard';
 import { ActiveEventHighlight } from '../components/dashboard/ActiveEventHighlight';
 import { EventSummaryCard } from '../components/dashboard/EventSummaryCard';
-import { RecentActivityList } from '../components/dashboard/RecentActivityList';
-import { DashboardEmptyState } from '../components/dashboard/DashboardEmptyState';
-import { DynamicQrWidget } from '../components/dashboard/DynamicQrWidget';
-import { DashboardEvent, DashboardMetrics, ActivityItem } from '../components/dashboard/mockDashboardData';
+import { DashboardEvent, DashboardMetrics } from '../components/dashboard/mockDashboardData';
 import { eventService, EventItem } from '../api/services';
 
 export interface DashboardPageProps {
@@ -17,6 +14,8 @@ export interface DashboardPageProps {
   onNavigateRegisterRider?: () => void;
   onNavigateScanner?: () => void;
   onNavigateReports?: () => void;
+  onNavigateEvents?: () => void;
+  onSelectEvent?: (id: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -24,8 +23,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateRegisterRider,
   onNavigateScanner,
   onNavigateReports,
+  onNavigateEvents,
+  onSelectEvent,
 }) => {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [, setLoading] = useState<boolean>(true);
   const [events, setEvents] = useState<EventItem[]>([]);
 
   useEffect(() => {
@@ -46,9 +47,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return () => { isMounted = false; };
   }, []);
 
-  const hasNoEvents = !loading && events.length === 0;
-
-  // Real aggregate metrics derived from MongoDB event records
+  // Real aggregate metrics derived strictly from database
   const totalRiders = events.reduce((sum, e) => sum + (e.riderCount || 0), 0);
   const activeEventsCount = events.filter((e) => e.status === 'active').length;
   const upcomingEventsCount = events.filter((e) => e.status === 'upcoming').length;
@@ -56,23 +55,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const realMetrics: DashboardMetrics = {
     totalRiders,
-    totalRidersGrowth: totalRiders > 0 ? `${totalRiders} total registered` : 'No registered riders yet',
+    totalRidersGrowth: totalRiders > 0 ? `${totalRiders} total registered` : 'No riders registered yet',
     activeEventsCount,
     upcomingEventsCount,
     completedEventsCount,
   };
 
-  const activeEventItem = events.find((e) => e.status === 'active') || events[0];
+  const activeEventItem = events.find((e) => e.status === 'active') || null;
   const activeEvent: DashboardEvent | null = activeEventItem ? {
     id: activeEventItem.id,
     name: activeEventItem.eventName,
     date: activeEventItem.rideDate,
     location: activeEventItem.location,
-    status: activeEventItem.status === 'active' ? 'active' : activeEventItem.status === 'completed' ? 'completed' : 'upcoming',
+    status: 'active',
     distanceKm: activeEventItem.rideDistance,
     riderCount: activeEventItem.riderCount || 0,
     checkpointCount: activeEventItem.checkpointCount || 0,
-    tagline: activeEventItem.description || 'Course is configured',
+    tagline: activeEventItem.description || 'Course is in progress',
   } : null;
 
   const dashboardEvents: DashboardEvent[] = events.map((e) => ({
@@ -87,58 +86,43 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     tagline: e.description || '',
   }));
 
-  const realActivities: ActivityItem[] = events.slice(0, 5).map((e, idx) => ({
-    id: `act-${e.id}-${idx}`,
-    type: 'event_created',
-    title: `Event created: ${e.eventName}`,
-    context: `${e.location} (${e.rideDistance} km)`,
-    timestamp: e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'Recently',
-  }));
-
   return (
     <PageContainer>
-      {/* 1. Dashboard Header */}
-      <DashboardHeader />
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        {/* 1. Hero Panoramic Scenic Landscape Banner */}
+        <DashboardHeader />
 
-      {/* 2. Dynamic QR Code System Widget */}
-      <DynamicQrWidget />
+        {/* 2. Quick Actions Card */}
+        <QuickActions
+          onCreateEvent={onNavigateCreateEvent}
+          onRegisterRider={onNavigateRegisterRider}
+          onOpenScanner={onNavigateScanner}
+          onNavigateReports={onNavigateReports}
+        />
 
-      {/* 3. Empty State or Populated State */}
-      {hasNoEvents ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <DashboardEmptyState
-            onCreateEvent={onNavigateCreateEvent || (() => {})}
-          />
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          {/* Priority 1: Quick Actions */}
-          <QuickActions
-            onCreateEvent={onNavigateCreateEvent}
-            onRegisterRider={onNavigateRegisterRider}
-            onOpenScanner={onNavigateScanner}
-            onNavigateReports={onNavigateReports}
-          />
+        {/* 3. Four Overview Metric Cards */}
+        <MetricCard
+          metrics={realMetrics}
+          onNavigateRiders={onNavigateRegisterRider}
+          onNavigateEvents={onNavigateEvents}
+        />
 
+        {/* 4. Current Event Highlight Banner with Cyclist Mountain Silhouette */}
+        <ActiveEventHighlight
+          event={activeEvent}
+          onOpenScanner={onNavigateScanner}
+          onViewAllEvents={onNavigateEvents}
+        />
 
-          {/* Priority 2: Prominent Total Riders & Overview Metrics */}
-          <MetricCard metrics={realMetrics} />
-
-          {/* Priority 3: Current Active Event Spotlight */}
-          {activeEvent && (
-            <ActiveEventHighlight
-              event={activeEvent}
-              onOpenScanner={onNavigateScanner || (() => {})}
-            />
-          )}
-
-          {/* Priority 4: Event Categories Summary (Upcoming, Active, Completed) */}
-          <EventSummaryCard events={dashboardEvents} />
-
-          {/* Priority 5: Recent Activity Feed */}
-          {realActivities.length > 0 && <RecentActivityList activities={realActivities} />}
-        </Box>
-      )}
+        {/* 5. Three Event Category Cards (Upcoming, Active, Completed) */}
+        <EventSummaryCard
+          events={dashboardEvents}
+          onCreateEvent={onNavigateCreateEvent}
+          onViewEvents={onNavigateEvents}
+          onViewReports={onNavigateReports}
+          onSelectEvent={onSelectEvent}
+        />
+      </Box>
     </PageContainer>
   );
 };

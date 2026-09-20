@@ -10,7 +10,7 @@ import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined';
 import { colors } from '../../../theme/colors';
 import { RideButton } from '../../../components/ui/RideButton';
-import { DetectedRider } from './ScannerMockData';
+import { DetectedRider } from './ScannerTypes';
 
 export interface RiderDetectedCardProps {
   rider: DetectedRider;

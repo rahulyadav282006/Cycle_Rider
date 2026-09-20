@@ -18,11 +18,8 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { colors } from '../../theme/colors';
 import { RideButton } from '../ui/RideButton';
-import {
-  Volunteer,
-  EVENT_OPTIONS,
-  CHECKPOINT_OPTIONS,
-} from './mockVolunteersData';
+import { Volunteer } from './mockVolunteersData';
+import { eventService } from '../../api/services';
 
 export interface AssignVolunteerDialogProps {
   open: boolean;
@@ -47,17 +44,29 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
   onSave,
   initialVolunteer,
   events,
-  checkpoints,
+  checkpoints: _checkpoints,
   currentEventName,
 }) => {
-  const availableEvents =
-    events && events.length > 0
-      ? events.map((e) => e.name)
-      : (EVENT_OPTIONS as unknown as string[]);
+  const [eventList, setEventList] = useState<{ id: string; name: string }[]>(events || []);
+
+  useEffect(() => {
+    if (events && events.length > 0) {
+      setEventList(events);
+    } else {
+      eventService
+        .listEvents()
+        .then((evs) => {
+          if (evs && evs.length > 0) {
+            setEventList(evs.map((e) => ({ id: e.id, name: e.eventName })));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [events]);
 
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
-  const [event, setEvent] = useState<string>(currentEventName || availableEvents[0] || 'Event');
+  const [event, setEvent] = useState<string>(currentEventName || (eventList[0]?.name) || '');
   const [checkpointId, setCheckpointId] = useState<string>('');
   const [checkpoint, setCheckpoint] = useState<string>('');
 
@@ -73,32 +82,22 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
     if (initialVolunteer) {
       setName(initialVolunteer.name);
       setMobile(initialVolunteer.mobile);
-      setEvent(initialVolunteer.event || currentEventName || availableEvents[0]);
-      if (initialVolunteer.checkpointId) {
-        setCheckpointId(initialVolunteer.checkpointId);
-        setCheckpoint(initialVolunteer.checkpoint || '');
-      } else if (initialVolunteer.checkpoint && initialVolunteer.checkpoint !== 'Unassigned') {
-        const matched = checkpoints?.find((c) => c.name === initialVolunteer.checkpoint);
-        setCheckpointId(matched?.id || '');
-        setCheckpoint(initialVolunteer.checkpoint);
-      } else {
-        setCheckpointId('');
-        setCheckpoint('Unassigned');
-      }
+      setEvent(initialVolunteer.event || currentEventName || (eventList[0]?.name) || '');
+      setCheckpoint(
+        initialVolunteer.checkpoint && initialVolunteer.checkpoint !== 'Unassigned'
+          ? initialVolunteer.checkpoint
+          : ''
+      );
+      setCheckpointId(initialVolunteer.checkpointId || '');
     } else {
       setName('');
       setMobile('');
-      setEvent(currentEventName || availableEvents[0]);
-      if (checkpoints && checkpoints.length > 0) {
-        setCheckpointId(checkpoints[0].id);
-        setCheckpoint(checkpoints[0].name);
-      } else {
-        setCheckpointId('');
-        setCheckpoint('Unassigned');
-      }
+      setEvent(currentEventName || (eventList[0]?.name) || '');
+      setCheckpoint('');
+      setCheckpointId('');
     }
     setErrors({});
-  }, [initialVolunteer, open, currentEventName, events, checkpoints]);
+  }, [initialVolunteer, open, currentEventName, eventList]);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -128,8 +127,8 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
     if (!event) {
       newErrors.event = 'Please select an event';
     }
-    if (!checkpoint && !checkpointId) {
-      newErrors.checkpoint = 'Please select a checkpoint';
+    if (!checkpoint.trim()) {
+      newErrors.checkpoint = 'Checkpoint is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -145,15 +144,16 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
     else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
     if (digits.length === 10) cleanMobile = digits;
 
-    const isUnassigned = !checkpointId || checkpointId === 'unassigned' || checkpoint === 'Unassigned';
+    const trimmedCp = checkpoint.trim();
+    const isUnassigned = !trimmedCp || trimmedCp.toLowerCase() === 'unassigned';
 
     onSave({
       id: initialVolunteer?.id,
       name: name.trim(),
       mobile: cleanMobile,
       event,
-      checkpoint: isUnassigned ? 'Unassigned' : checkpoint,
-      checkpointId: isUnassigned ? undefined : checkpointId,
+      checkpoint: isUnassigned ? 'Unassigned' : trimmedCp,
+      checkpointId: isUnassigned ? undefined : (checkpointId || trimmedCp),
     });
     onClose();
   };
@@ -438,11 +438,17 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
                   },
                 }}
               >
-                {EVENT_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+                {eventList.length > 0 ? (
+                  eventList.map((ev) => (
+                    <option key={ev.id} value={ev.name}>
+                      {ev.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value={currentEventName || event || 'Event'}>
+                    {currentEventName || event || 'Event'}
                   </option>
-                ))}
+                )}
               </Box>
               <EventOutlinedIcon
                 sx={{
@@ -474,7 +480,7 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
             )}
           </Box>
 
-          {/* Checkpoint Dropdown */}
+          {/* Checkpoint Input (Dropdown removed) */}
           <Box>
             <Typography
               component="label"
@@ -488,82 +494,43 @@ export const AssignVolunteerDialog: React.FC<AssignVolunteerDialogProps> = ({
             >
               Checkpoint <Box component="span" sx={{ color: '#EF4444' }}>*</Box>
             </Typography>
-            <Box sx={{ position: 'relative' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                height: 42,
+                px: 1.5,
+                border: '1px solid',
+                borderColor: errors.checkpoint ? '#EF4444' : colors.surface.borderStrong,
+                borderRadius: '6px',
+                backgroundColor: '#FFFFFF',
+                '&:focus-within': {
+                  borderColor: errors.checkpoint ? '#EF4444' : colors.brand.accent,
+                  outline: `2px solid ${errors.checkpoint ? '#EF4444' : colors.brand.accent}`,
+                  outlineOffset: '1px',
+                },
+              }}
+            >
+              <LocationOnOutlinedIcon sx={{ fontSize: 18, color: colors.text.muted, mr: 1 }} />
               <Box
-                component="select"
-                value={checkpointId || (checkpoint === 'Unassigned' ? 'unassigned' : checkpoint)}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                component="input"
+                type="text"
+                placeholder="e.g. 1. Verification CP or CP 1"
+                value={checkpoint}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const val = e.target.value;
-                  if (val === 'unassigned' || !val) {
-                    setCheckpointId('');
-                    setCheckpoint('Unassigned');
-                  } else {
-                    const matched = checkpoints?.find((c) => c.id === val);
-                    if (matched) {
-                      setCheckpointId(matched.id);
-                      setCheckpoint(matched.name);
-                    } else {
-                      setCheckpointId(val);
-                      setCheckpoint(val);
-                    }
-                  }
+                  setCheckpoint(val);
+                  setCheckpointId(val);
                   if (errors.checkpoint) setErrors({ ...errors, checkpoint: undefined });
                 }}
                 sx={{
-                  width: '100%',
-                  height: 42,
-                  appearance: 'none',
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${errors.checkpoint ? '#EF4444' : colors.surface.borderStrong}`,
-                  borderRadius: '6px',
-                  px: 1.5,
-                  pl: 4.5,
-                  pr: 4,
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: colors.text.primary,
-                  cursor: 'pointer',
+                  flex: 1,
+                  border: 'none',
                   outline: 'none',
-                  '&:focus': {
-                    borderColor: errors.checkpoint ? '#EF4444' : colors.brand.accent,
-                    outline: `2px solid ${errors.checkpoint ? '#EF4444' : colors.brand.accent}`,
-                    outlineOffset: '1px',
-                  },
-                }}
-              >
-                <option value="unassigned">-- Unassigned --</option>
-                {checkpoints && checkpoints.length > 0
-                  ? checkpoints.map((cp, idx) => (
-                      <option key={cp.id} value={cp.id}>
-                        {cp.sequenceNumber || idx + 1}. {cp.name}
-                      </option>
-                    ))
-                  : CHECKPOINT_OPTIONS.map((cp, idx) => (
-                      <option key={cp} value={cp}>
-                        {idx + 1}. {cp}
-                      </option>
-                    ))}
-              </Box>
-              <LocationOnOutlinedIcon
-                sx={{
-                  position: 'absolute',
-                  left: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: colors.text.muted,
-                  pointerEvents: 'none',
-                  fontSize: 18,
-                }}
-              />
-              <KeyboardArrowDownIcon
-                sx={{
-                  position: 'absolute',
-                  right: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: colors.text.muted,
-                  pointerEvents: 'none',
-                  fontSize: 18,
+                  backgroundColor: 'transparent',
+                  fontSize: '0.875rem',
+                  color: colors.text.primary,
+                  '&::placeholder': { color: colors.text.muted },
                 }}
               />
             </Box>

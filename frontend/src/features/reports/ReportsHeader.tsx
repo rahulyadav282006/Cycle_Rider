@@ -4,6 +4,7 @@ import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { colors } from '../../theme/colors';
 import { RideButton } from '../../components/ui/RideButton';
+import { PageHeroBanner } from '../../components/common/PageHeroBanner';
 
 export type ReportsPrototypeState =
   | 'dashboard'
@@ -184,31 +185,11 @@ export const ReportsHeader: React.FC<ReportsHeaderProps> = ({
           gap: 2,
         }}
       >
-        {/* Title & Subtitle */}
-        <Box>
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '1.75rem' },
-              fontWeight: 800,
-              color: colors.text.primary,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2,
-              mb: 0.5,
-            }}
-          >
-            Reports
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: colors.text.secondary,
-              lineHeight: 1.4,
-            }}
-          >
-            Generate and review reports for cycling events.
-          </Typography>
-        </Box>
+      {/* 1. Panoramic Scenic Hero Banner */}
+      <PageHeroBanner
+        title="Reports"
+        subtitle="Generate and download event reports."
+      />
 
         {/* Top-Right Header Actions: Event Selector & Export Report Button */}
         <Box

@@ -4,6 +4,10 @@ import {
   CircularProgress,
   MenuItem,
   Select,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Typography,
 } from '@mui/material';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
@@ -13,6 +17,8 @@ import { colors } from '../../theme/colors';
 import { RideBadge } from '../ui/RideBadge';
 import { RideButton } from '../ui/RideButton';
 import { EventFormField } from './EventFormField';
+import { CheckpointRouteTimeline } from '../routes/CheckpointRouteTimeline';
+import { RoutePoint, CheckpointItem } from '../../api/services';
 
 export type EventStatusOption = 'draft' | 'published' | 'live' | 'completed' | 'cancelled';
 
@@ -25,6 +31,7 @@ export interface CreateEventFormData {
   startTime: string;
   organizerName: string;
   eventStatus: EventStatusOption;
+  paymentRequired?: boolean;
 }
 
 export interface CreateEventFormErrors {
@@ -43,7 +50,21 @@ export interface CreateEventFormProps {
   isSubmitting: boolean;
   submitLabel?: string;
   submittingLabel?: string;
-  onFieldChange: (field: keyof CreateEventFormData, value: string) => void;
+  startLocation?: { name: string; lat: number; lng: number } | null;
+  finishLocation?: { name: string; lat: number; lng: number } | null;
+  routePoints?: RoutePoint[];
+  routeGeometry?: [number, number][];
+  checkpoints?: Partial<CheckpointItem>[];
+  onStartLocationChange?: (loc: { name: string; lat: number; lng: number } | null) => void;
+  onFinishLocationChange?: (loc: { name: string; lat: number; lng: number } | null) => void;
+  onRoutePointsChange?: (points: RoutePoint[]) => void;
+  onRouteGeometryChange?: (
+    geometry: [number, number][],
+    distanceKm: number,
+    durationMinutes: number
+  ) => void;
+  onCheckpointsChange?: (checkpoints: Partial<CheckpointItem>[]) => void;
+  onFieldChange: (field: keyof CreateEventFormData, value: any) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
@@ -54,6 +75,16 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
   isSubmitting,
   submitLabel = 'Save Event',
   submittingLabel = 'Saving Event...',
+  startLocation = null,
+  finishLocation = null,
+  routePoints: _routePoints = [],
+  routeGeometry: _routeGeometry = [],
+  checkpoints = [],
+  onStartLocationChange,
+  onFinishLocationChange,
+  onRoutePointsChange: _onRoutePointsChange,
+  onRouteGeometryChange: _onRouteGeometryChange,
+  onCheckpointsChange,
   onFieldChange,
   onSubmit,
   onCancel,
@@ -420,7 +451,59 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
           </EventFormField>
         </Box>
 
-        {/* 8. Description (multiline textarea, span 2 on desktop) */}
+        {/* 8. Payment Required? */}
+        <Box sx={{ gridColumn: { xs: '1 / -1', md: 'span 1' } }}>
+          <EventFormField
+            label="Payment Required?"
+            required
+            helperText={
+              formData.paymentRequired
+                ? 'Rider registrations will require payment verification before receiving their QR pass.'
+                : 'Riders can receive their QR code immediately upon registration.'
+            }
+          >
+            <RadioGroup
+              row
+              name="payment-required-group"
+              value={formData.paymentRequired ? 'yes' : 'no'}
+              onChange={(e) => onFieldChange('paymentRequired', e.target.value === 'yes')}
+              sx={{ gap: 2, height: 44, alignItems: 'center' }}
+            >
+              <FormControlLabel
+                value="yes"
+                control={
+                  <Radio
+                    id="payment-required-yes"
+                    size="small"
+                    sx={{ color: colors.brand.accent, '&.Mui-checked': { color: colors.brand.accent } }}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary }}>
+                    Yes
+                  </Typography>
+                }
+              />
+              <FormControlLabel
+                value="no"
+                control={
+                  <Radio
+                    id="payment-required-no"
+                    size="small"
+                    sx={{ color: colors.brand.accent, '&.Mui-checked': { color: colors.brand.accent } }}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary }}>
+                    No
+                  </Typography>
+                }
+              />
+            </RadioGroup>
+          </EventFormField>
+        </Box>
+
+        {/* 9. Description (multiline textarea, span 2 on desktop) */}
         <Box sx={{ gridColumn: '1 / -1' }}>
           <EventFormField
             label="Description"
@@ -461,6 +544,31 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
         </Box>
       </Box>
 
+      {/* Sequential Checkpoint Route Timeline */}
+      <Box sx={{ mb: 3.5 }}>
+        <CheckpointRouteTimeline
+          readOnly={isSubmitting}
+          startLocation={startLocation}
+          finishLocation={finishLocation}
+          checkpoints={checkpoints}
+          onStartLocationChange={(loc) => {
+            if (onStartLocationChange) onStartLocationChange(loc);
+            if (loc && (!formData.location || formData.location.trim() === '')) {
+              onFieldChange('location', loc.name);
+            }
+          }}
+          onFinishLocationChange={(loc) => {
+            if (onFinishLocationChange) onFinishLocationChange(loc);
+            if (loc && startLocation) {
+              onFieldChange('location', `${startLocation.name} to ${loc.name}`);
+            } else if (loc && (!formData.location || formData.location.trim() === '')) {
+              onFieldChange('location', loc.name);
+            }
+          }}
+          onCheckpointsChange={onCheckpointsChange}
+        />
+      </Box>
+
       {/* Form Action Buttons: [ Cancel ] and [ Save Event ] */}
       <Box
         sx={{
@@ -488,6 +596,7 @@ export const CreateEventForm: React.FC<CreateEventFormProps> = ({
         </RideButton>
 
         <RideButton
+          id="btn-save-event"
           variant="primary"
           size="md"
           type="submit"

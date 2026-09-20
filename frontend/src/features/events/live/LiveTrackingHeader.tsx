@@ -7,7 +7,7 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import StraightenOutlinedIcon from '@mui/icons-material/StraightenOutlined';
 import { colors } from '../../../theme/colors';
 import { RideBadge } from '../../../components/ui/RideBadge';
-import { RideButton } from '../../../components/ui/RideButton';
+import { PageHeroBanner } from '../../../components/common/PageHeroBanner';
 
 export type LiveTrackingPrototypeState =
   | 'populated'
@@ -17,6 +17,10 @@ export type LiveTrackingPrototypeState =
   | 'offline_warning';
 
 export interface LiveTrackingHeaderProps {
+  eventName?: string;
+  eventDate?: string;
+  location?: string;
+  distanceKm?: number;
   onBackToEvent?: () => void;
   activeState?: LiveTrackingPrototypeState;
   onStateChange?: (state: LiveTrackingPrototypeState) => void;
@@ -24,6 +28,10 @@ export interface LiveTrackingHeaderProps {
 }
 
 export const LiveTrackingHeader: React.FC<LiveTrackingHeaderProps> = ({
+  eventName,
+  eventDate,
+  location,
+  distanceKm,
   onBackToEvent,
   activeState = 'populated',
   onStateChange,
@@ -153,7 +161,7 @@ export const LiveTrackingHeader: React.FC<LiveTrackingHeaderProps> = ({
           }}
           onClick={onBackToEvent}
         >
-          Kolhapur Endurance Ride
+          {eventName || 'Event'}
         </Typography>
         <Typography component="span" sx={{ color: colors.text.muted }}>
           &gt;
@@ -170,49 +178,42 @@ export const LiveTrackingHeader: React.FC<LiveTrackingHeaderProps> = ({
         </Typography>
       </Box>
 
-      {/* Title & Back Action */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-          gap: 2,
-          mb: 2.5,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' },
-              fontWeight: 800,
-              color: colors.text.primary,
-              letterSpacing: '-0.02em',
-              mb: 0.5,
-            }}
-          >
-            Live Tracking
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: colors.text.secondary,
-              lineHeight: 1.4,
-            }}
-          >
-            Monitor rider progress and checkpoint activity in real time.
-          </Typography>
-        </Box>
-
-        <RideButton
-          variant="secondary"
-          onClick={onBackToEvent}
-          startIcon={<ArrowBackOutlinedIcon sx={{ fontSize: 18 }} />}
-        >
-          Back to Event
-        </RideButton>
-      </Box>
+      {/* 1. Panoramic Scenic Hero Banner */}
+      <PageHeroBanner
+        title="Live Tracking"
+        subtitle="Track rider progress in real time."
+        actionButton={
+          onBackToEvent ? (
+            <Box
+              component="button"
+              type="button"
+              onClick={onBackToEvent}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.75,
+                px: 2,
+                py: 1,
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backdropFilter: 'blur(4px)',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                },
+              }}
+            >
+              <ArrowBackOutlinedIcon sx={{ fontSize: 16 }} />
+              Back to Event
+            </Box>
+          ) : undefined
+        }
+      />
 
       {/* Event Header Summary Strip */}
       <Box
@@ -241,7 +242,7 @@ export const LiveTrackingHeader: React.FC<LiveTrackingHeaderProps> = ({
               lineHeight: 1.2,
             }}
           >
-            Kolhapur Endurance Ride
+            {eventName || 'Live Tracking'}
           </Typography>
           <RideBadge status="active" label="ACTIVE" size="sm" />
         </Box>
@@ -260,21 +261,21 @@ export const LiveTrackingHeader: React.FC<LiveTrackingHeaderProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
             <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-              13 September 2026
+              {eventDate || '—'}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <PlaceOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
             <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-              Kolhapur
+              {location || '—'}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <StraightenOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
             <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary }}>
-              200 km
+              {distanceKm ? `${distanceKm} km` : '—'}
             </Typography>
           </Box>
         </Box>

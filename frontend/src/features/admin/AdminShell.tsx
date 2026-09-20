@@ -6,7 +6,6 @@ import {
   IconButton,
   Drawer,
 } from '@mui/material';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
@@ -116,20 +115,18 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
+              component="img"
+              src="/ridetrack-emblem.png"
+              alt="RideTrack"
               sx={{
-                width: 28,
-                height: 28,
-                borderRadius: '6px',
-                backgroundColor: colors.brand.accent,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
+                height: 24,
+                width: 'auto',
+                borderRadius: '5px',
+                objectFit: 'contain',
+                display: 'block',
               }}
-            >
-              <DirectionsBikeIcon sx={{ fontSize: 16 }} />
-            </Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+            />
+            <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: colors.text.primary, letterSpacing: '-0.02em' }}>
               RideTrack
             </Typography>
           </Box>
@@ -183,7 +180,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             sx: {
               width: 280,
               backgroundColor: colors.surface.sidebar,
-              color: '#FFFFFF',
+              color: colors.text.primary,
+              borderRight: `1px solid ${colors.surface.sidebarBorder}`,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
@@ -196,34 +194,31 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
               <Box
+                component="img"
+                src="/ridetrack-emblem.png"
+                alt="RideTrack"
                 sx={{
-                  width: 32,
-                  height: 32,
+                  height: 30,
+                  width: 'auto',
                   borderRadius: '6px',
-                  backgroundColor: colors.brand.accent,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
+                  objectFit: 'contain',
                 }}
-              >
-                <DirectionsBikeIcon sx={{ fontSize: 18 }} />
-              </Box>
+              />
               <Box>
-                <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: colors.text.primary, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   RideTrack
                 </Typography>
-                <Typography sx={{ fontSize: '0.6875rem', color: '#94A3B8' }}>
+                <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: '#135F63', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   Super Admin Console
                 </Typography>
               </Box>
             </Box>
-            <IconButton size="small" onClick={() => setMobileDrawerOpen(false)} sx={{ color: '#94A3B8' }}>
+            <IconButton size="small" onClick={() => setMobileDrawerOpen(false)} sx={{ color: colors.text.secondary }}>
               <CloseIcon />
             </IconButton>
           </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {navItems.map((item) => {
               const isActive = activeNavId === item.id;
               return (
@@ -237,19 +232,24 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1.5,
-                    px: 2,
+                    px: 1.75,
                     py: 1.25,
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     border: 'none',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: isActive ? 700 : 500,
-                    backgroundColor: isActive ? colors.surface.sidebarActive : 'transparent',
-                    color: isActive ? '#FFFFFF' : '#94A3B8',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    backgroundColor: isActive ? '#D5E7DB' : 'transparent',
+                    color: isActive ? '#135F63' : '#1F2937',
+                    transition: 'all 0.15s ease',
                     '&:hover': {
-                      backgroundColor: colors.surface.sidebarActive,
-                      color: '#FFFFFF',
+                      backgroundColor: isActive ? '#D5E7DB' : 'rgba(0, 0, 0, 0.04)',
+                      color: '#135F63',
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: isActive ? '#135F63' : '#374151',
+                      fontSize: 20,
                     },
                   }}
                 >
@@ -261,7 +261,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           </Box>
         </Box>
 
-        <Box sx={{ pt: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ pt: 2, borderTop: `1px solid ${colors.surface.sidebarBorder}`, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {onExitAdmin && (
             <RideButton
               variant="secondary"
@@ -272,9 +272,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                 onExitAdmin();
               }}
               sx={{
-                color: '#FFFFFF',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+                color: colors.text.primary,
+                borderColor: colors.surface.sidebarBorder,
+                backgroundColor: '#FFFFFF',
+                fontWeight: 800,
+                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
               }}
             >
               Exit to Organizer
@@ -290,10 +292,11 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                 onLogout();
               }}
               sx={{
-                color: '#F87171',
-                borderColor: 'rgba(239, 68, 68, 0.35)',
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.25)', borderColor: '#EF4444' },
+                color: '#DC2626',
+                borderColor: '#FCA5A5',
+                backgroundColor: '#FFFFFF',
+                fontWeight: 800,
+                '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
               }}
             >
               <LogoutOutlinedIcon sx={{ fontSize: 16, mr: 0.75 }} />
@@ -314,8 +317,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             width: 250,
             flexShrink: 0,
             backgroundColor: colors.surface.sidebar,
-            color: '#FFFFFF',
-            borderRight: `1px solid ${colors.brand.primaryLight}`,
+            color: colors.text.primary,
+            borderRight: `1px solid ${colors.surface.sidebarBorder}`,
             position: 'fixed',
             left: 0,
             top: 0,
@@ -331,40 +334,39 @@ export const AdminShell: React.FC<AdminShellProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: 1.5,
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottom: `1px solid ${colors.surface.sidebarBorder}`,
             }}
           >
             <Box
+              component="img"
+              src="/ridetrack-emblem.png"
+              alt="RideTrack Logo"
               sx={{
-                width: 34,
                 height: 34,
-                borderRadius: '6px',
-                backgroundColor: colors.brand.accent,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
+                maxWidth: 82,
+                width: 'auto',
+                borderRadius: '7px',
+                objectFit: 'contain',
                 flexShrink: 0,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
               }}
-            >
-              <DirectionsBikeIcon sx={{ fontSize: 20 }} />
-            </Box>
+            />
             <Box>
               <Typography
                 variant="h3"
                 sx={{
-                  fontSize: '1.05rem',
+                  fontSize: '1.1rem',
                   fontWeight: 800,
                   letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
+                  color: colors.text.primary,
                   lineHeight: 1.1,
                 }}
               >
                 RideTrack
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-                <ShieldOutlinedIcon sx={{ fontSize: 11, color: '#38BDF8' }} />
-                <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: '#38BDF8', letterSpacing: '0.04em' }}>
+                <ShieldOutlinedIcon sx={{ fontSize: 11, color: '#135F63' }} />
+                <Typography sx={{ fontSize: '0.6875rem', fontWeight: 800, color: '#135F63', letterSpacing: '0.04em' }}>
                   SUPER ADMIN
                 </Typography>
               </Box>
@@ -380,7 +382,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
               py: 2,
               display: 'flex',
               flexDirection: 'column',
-              gap: 0.5,
+              gap: 0.75,
               overflowY: 'auto',
             }}
           >
@@ -397,28 +399,32 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1.5,
-                    px: 1.5,
+                    px: 1.75,
                     py: 1.25,
-                    borderRadius: '6px',
+                    borderRadius: '10px',
                     border: 'none',
                     cursor: 'pointer',
                     textAlign: 'left',
                     fontFamily: 'inherit',
-                    fontSize: '0.875rem',
-                    fontWeight: isActive ? 600 : 500,
-                    backgroundColor: isActive ? colors.surface.sidebarActive : 'transparent',
-                    color: isActive ? '#FFFFFF' : '#94A3B8',
-                    transition: 'all 0.15s ease-in-out',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    backgroundColor: isActive ? '#D5E7DB' : 'transparent',
+                    color: isActive ? '#135F63' : '#1F2937',
+                    transition: 'all 0.15s ease',
                     '&:hover': {
-                      backgroundColor: colors.surface.sidebarActive,
-                      color: '#FFFFFF',
+                      backgroundColor: isActive ? '#D5E7DB' : 'rgba(0, 0, 0, 0.04)',
+                      color: '#135F63',
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: isActive ? '#135F63' : '#374151',
+                      fontSize: 20,
                     },
                   }}
                 >
-                  <Box sx={{ color: isActive ? '#38BDF8' : '#94A3B8', display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ color: 'inherit', display: 'flex', alignItems: 'center' }}>
                     {item.icon}
                   </Box>
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 'inherit', color: 'inherit' }}>
+                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, color: 'inherit' }}>
                     {item.label}
                   </Typography>
                 </Box>
@@ -430,28 +436,30 @@ export const AdminShell: React.FC<AdminShellProps> = ({
           <Box
             sx={{
               p: 2,
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              backgroundColor: 'rgba(15, 23, 42, 0.8)',
+              borderTop: `1px solid ${colors.surface.sidebarBorder}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Avatar
                 sx={{
-                  width: 36,
-                  height: 36,
-                  backgroundColor: '#0284C7',
+                  width: 38,
+                  height: 38,
+                  backgroundColor: '#135F63',
                   color: '#FFFFFF',
-                  fontWeight: 700,
-                  fontSize: '0.8125rem',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
                 }}
               >
                 SA
               </Avatar>
               <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 800, color: colors.text.primary, lineHeight: 1.2 }}>
                   Super Admin
                 </Typography>
-                <Typography sx={{ fontSize: '0.6875rem', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#52796F', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   admin@ridetrack.com
                 </Typography>
               </Box>
@@ -459,67 +467,39 @@ export const AdminShell: React.FC<AdminShellProps> = ({
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
               {onExitAdmin && (
-                <Box
-                  component="button"
-                  type="button"
+                <RideButton
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                   onClick={onExitAdmin}
                   sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.75,
-                    py: 0.75,
-                    px: 1,
-                    borderRadius: '6px',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    color: '#CBD5E1',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#FFFFFF',
-                    },
+                    color: colors.text.primary,
+                    borderColor: colors.surface.sidebarBorder,
+                    backgroundColor: '#FFFFFF',
+                    fontWeight: 800,
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
                   }}
                 >
                   Exit to Organizer
-                </Box>
+                </RideButton>
               )}
-
               {onLogout && (
-                <Box
-                  component="button"
-                  type="button"
+                <RideButton
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                   onClick={onLogout}
                   sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.75,
-                    py: 0.85,
-                    px: 1.5,
-                    borderRadius: '6px',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                    color: '#FCA5A5',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(239, 68, 68, 0.25)',
-                      color: '#FFFFFF',
-                      borderColor: 'rgba(239, 68, 68, 0.6)',
-                    },
+                    color: '#DC2626',
+                    borderColor: '#FCA5A5',
+                    backgroundColor: '#FFFFFF',
+                    fontWeight: 800,
+                    '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
                   }}
                 >
-                  <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
+                  <LogoutOutlinedIcon sx={{ fontSize: 16, mr: 0.75 }} />
                   Logout
-                </Box>
+                </RideButton>
               )}
             </Box>
           </Box>

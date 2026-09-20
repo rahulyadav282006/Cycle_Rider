@@ -90,7 +90,7 @@ export const NoCheckpointAssignedState: React.FC<NoCheckpointAssignedStateProps>
           variant="primary"
           size="md"
           startIcon={<ContactSupportOutlinedIcon />}
-          onClick={onContactCoordinator || (() => alert('Please contact the Event Organizer desk at Kolhapur Endurance Ride.'))}
+          onClick={onContactCoordinator || (() => alert('Please contact the Event Organizer desk.'))}
           sx={{ minHeight: 44, fontWeight: 700 }}
         >
           Contact Coordinator

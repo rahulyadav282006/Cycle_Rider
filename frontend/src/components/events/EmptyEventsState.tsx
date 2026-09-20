@@ -3,7 +3,6 @@ import { Box, Typography } from '@mui/material';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { colors } from '../../theme/colors';
-import { RideButton } from '../ui/RideButton';
 
 export interface EmptyEventsStateProps {
   onCreateEvent: () => void;
@@ -14,8 +13,8 @@ export const EmptyEventsState: React.FC<EmptyEventsStateProps> = ({ onCreateEven
     <Box
       sx={{
         backgroundColor: colors.surface.card,
-        border: `1px dashed ${colors.surface.borderStrong}`,
-        borderRadius: '8px',
+        border: `1px solid ${colors.surface.border}`,
+        borderRadius: '14px',
         py: { xs: 8, sm: 10 },
         px: 3,
         textAlign: 'center',
@@ -23,64 +22,76 @@ export const EmptyEventsState: React.FC<EmptyEventsStateProps> = ({ onCreateEven
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.02)',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
       }}
     >
       <Box
         sx={{
-          width: 68,
-          height: 68,
+          width: 64,
+          height: 64,
           borderRadius: '50%',
-          backgroundColor: colors.surface.subtle,
-          border: `1px solid ${colors.surface.border}`,
+          backgroundColor: '#D1FAE5',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: colors.brand.accent,
+          color: '#0F766E',
           mb: 2.5,
         }}
       >
-        <EventAvailableOutlinedIcon sx={{ fontSize: 34 }} />
+        <EventAvailableOutlinedIcon sx={{ fontSize: 32 }} />
       </Box>
 
       <Typography
         variant="h2"
         sx={{
           fontSize: { xs: '1.25rem', sm: '1.375rem' },
-          fontWeight: 700,
+          fontWeight: 800,
           color: colors.text.primary,
           letterSpacing: '-0.02em',
           mb: 1,
         }}
       >
-        No events yet
+        No events found
       </Typography>
 
       <Typography
         sx={{
           fontSize: '0.875rem',
-          color: colors.text.secondary,
+          color: colors.text.muted,
           maxWidth: 420,
           mb: 3,
           lineHeight: 1.5,
         }}
       >
-        Create your first cycling event to get started. You can configure distance stages, checkpoints, and begin registering endurance riders.
+        Create your first event to get started.
       </Typography>
 
-      <RideButton
-        variant="primary"
-        size="md"
-        startIcon={<AddCircleIcon />}
+      <Box
+        component="button"
+        type="button"
         onClick={onCreateEvent}
         sx={{
           minHeight: 44,
           px: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1,
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: '#135F63',
+          color: '#FFFFFF',
+          fontSize: '0.875rem',
           fontWeight: 700,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          '&:hover': {
+            backgroundColor: '#0E484B',
+          },
         }}
       >
+        <AddCircleIcon sx={{ fontSize: 18 }} />
         Create Event
-      </RideButton>
+      </Box>
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -14,41 +14,111 @@ import HourglassEmptyOutlinedIcon from '@mui/icons-material/HourglassEmptyOutlin
 import { colors } from '../../theme/colors';
 import { ReportSummaryCards } from './ReportSummaryCards';
 import { ReportToolbar } from './ReportToolbar';
-import { MOCK_REPORT_HOME_SAFE, MOCK_REPORT_EVENT } from './mockReportsData';
+import { reportService, riderService, eventService } from '../../api/services';
 
 export interface HomeSafeReportProps {
+  eventId?: string;
   onBackToReports: () => void;
   onExport: (format: 'CSV' | 'Excel') => void;
 }
 
 export const HomeSafeReport: React.FC<HomeSafeReportProps> = ({
+  eventId,
   onBackToReports,
   onExport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [eventData, setEventData] = useState<{
+    name: string;
+    date: string;
+    location: string;
+    totalRegistered: number;
+  }>({
+    name: 'Event',
+    date: '',
+    location: '',
+    totalRegistered: 0,
+  });
 
-  const statusOptions = ['All Status', 'Confirmed', 'Pending'];
+  const statusOptions = ['All Status', 'Confirmed Safe', 'Pending'];
+
+  useEffect(() => {
+    let isMounted = true;
+    if (eventId) {
+      setLoading(true);
+      Promise.all([
+        eventService.getEvent(eventId).catch(() => null),
+        riderService.listRiders(eventId).catch(() => []),
+        reportService.getReport(eventId, 'home_safe').catch(() => null),
+      ])
+        .then(([ev, riderList, rep]) => {
+          if (!isMounted) return;
+          if (ev) {
+            setEventData({
+              name: ev.eventName || 'Event',
+              date: ev.rideDate || '',
+              location: ev.location || '',
+              totalRegistered: Array.isArray(riderList) ? riderList.length : 0,
+            });
+          }
+
+          const confirmedMap = new Set<string>();
+          if (rep && Array.isArray(rep.items)) {
+            rep.items.forEach((it: any) => confirmedMap.add(it.riderId));
+          }
+
+          if (Array.isArray(riderList)) {
+            const mapped = riderList.map((r: any) => {
+              const isConfirmed = confirmedMap.has(r.riderId) || r.status === 'Finished' || r.homeSafe === true;
+              return {
+                id: r.id,
+                riderId: r.riderId,
+                name: r.name,
+                jerseyNumber: r.jerseyNumber || '101',
+                mobile: r.mobile,
+                emergencyContact: r.emergencyContact,
+                status: isConfirmed ? 'Confirmed Safe' : 'Pending',
+              };
+            });
+            setItems(mapped);
+          } else {
+            setItems([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
 
   const filteredItems = useMemo(() => {
-    return MOCK_REPORT_HOME_SAFE.filter((item) => {
+    return items.filter((item) => {
       const matchesSearch =
         !searchQuery.trim() ||
-        item.riderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.riderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.jerseyNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        (item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.riderId && item.riderId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.jerseyNumber && String(item.jerseyNumber).toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesStatus =
         statusFilter === 'All Status' || item.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [searchQuery, statusFilter]);
+  }, [items, searchQuery, statusFilter]);
+
+  const confirmedCount = items.filter((i) => i.status === 'Confirmed Safe').length;
+  const pendingCount = items.length - confirmedCount;
 
   const summaryCards = [
-    { label: 'REGISTERED', value: 342, helper: 'Total participants' },
-    { label: 'HOME SAFE', value: 270, color: '#059669', helper: 'Safety verified' },
-    { label: 'PENDING CONFIRMATION', value: 72, color: '#D97706', helper: 'Awaiting rider ping' },
+    { label: 'REGISTERED RIDERS', value: items.length, helper: 'Total event participants' },
+    { label: 'CONFIRMED HOME SAFE', value: confirmedCount, color: '#059669', helper: 'Safety verified' },
+    { label: 'PENDING CONFIRMATION', value: pendingCount, color: pendingCount > 0 ? '#D97706' : '#059669', helper: 'Awaiting checkpoint / final ping' },
   ];
 
   return (
@@ -68,7 +138,7 @@ export const HomeSafeReport: React.FC<HomeSafeReportProps> = ({
           Home Safe Confirmation
         </Typography>
         <Typography sx={{ fontSize: '0.875rem', color: colors.text.secondary }}>
-          {MOCK_REPORT_EVENT.name} • {MOCK_REPORT_EVENT.date} • Post-Ride Safety Verification
+          {eventData.name} {eventData.date ? `• ${eventData.date}` : ''} • Post-Ride Safety & Return Verification
         </Typography>
       </Box>
 
@@ -79,7 +149,7 @@ export const HomeSafeReport: React.FC<HomeSafeReportProps> = ({
       <ReportToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search rider by name, ID, or jersey..."
+        searchPlaceholder="Search riders by name, ID, or jersey..."
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         statusOptions={statusOptions}
@@ -113,70 +183,84 @@ export const HomeSafeReport: React.FC<HomeSafeReportProps> = ({
                   JERSEY NUMBER
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
-                  LAST CHECKPOINT
+                  MOBILE
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
-                  HOME SAFE TIME
+                  EMERGENCY CONTACT
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
-                  STATUS
+                  SAFETY STATUS
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredItems.map((item) => {
-                const isConfirmed = item.status === 'Confirmed';
-                return (
-                  <TableRow
-                    key={item.id}
-                    sx={{
-                      '&:last-child td': { borderBottom: 0 },
-                      '&:hover': { backgroundColor: colors.surface.page },
-                      transition: 'background-color 0.15s ease',
-                    }}
-                  >
-                    <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace, monospace', color: colors.primary.main, py: 1.5 }}>
-                      {item.riderId}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
-                      {item.riderName}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
-                      {item.jerseyNumber}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.875rem', color: colors.text.secondary, py: 1.5 }}>
-                      {item.lastCheckpoint}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
-                      {item.homeSafeTime}
-                    </TableCell>
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 0.5,
-                          px: 1,
-                          py: 0.25,
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          backgroundColor: isConfirmed ? '#ECFDF5' : '#FFFBEB',
-                          color: isConfirmed ? '#065F46' : '#92400E',
-                          border: `1px solid ${isConfirmed ? '#A7F3D0' : '#FDE68A'}`,
-                        }}
-                      >
-                        {isConfirmed ? (
-                          <CheckCircleOutlinedIcon sx={{ fontSize: 13, color: '#059669' }} />
-                        ) : (
-                          <HourglassEmptyOutlinedIcon sx={{ fontSize: 13, color: '#D97706' }} />
-                        )}
-                        {item.status}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: colors.text.secondary }}>
+                    Loading home safe verification records...
+                  </TableCell>
+                </TableRow>
+              ) : filteredItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: colors.text.secondary }}>
+                    No riders found for this report filter.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredItems.map((item, idx) => {
+                  const isConfirmed = item.status === 'Confirmed Safe';
+                  return (
+                    <TableRow
+                      key={item.id || idx}
+                      sx={{
+                        '&:last-child td': { borderBottom: 0 },
+                        '&:hover': { backgroundColor: colors.surface.page },
+                        transition: 'background-color 0.15s ease',
+                      }}
+                    >
+                      <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace', color: colors.primary.main, py: 1.5 }}>
+                        {item.riderId}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
+                        {item.name}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
+                        #{item.jerseyNumber}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8125rem', color: colors.text.secondary, py: 1.5 }}>
+                        {item.mobile}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8125rem', color: colors.text.secondary, py: 1.5 }}>
+                        {item.emergencyContact}
+                      </TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Box
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            backgroundColor: isConfirmed ? '#ECFDF5' : '#FFFBEB',
+                            color: isConfirmed ? '#065F46' : '#92400E',
+                            border: `1px solid ${isConfirmed ? '#A7F3D0' : '#FDE68A'}`,
+                          }}
+                        >
+                          {isConfirmed ? (
+                            <CheckCircleOutlinedIcon sx={{ fontSize: 13, color: '#059669' }} />
+                          ) : (
+                            <HourglassEmptyOutlinedIcon sx={{ fontSize: 13, color: '#D97706' }} />
+                          )}
+                          {item.status}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </TableContainer>

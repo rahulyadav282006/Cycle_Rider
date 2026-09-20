@@ -4,7 +4,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { colors } from '../../theme/colors';
-import { RiderStatus, MOCK_EVENTS_LIST } from './mockRidersData';
+import { RiderStatus } from './mockRidersData';
 
 export type RiderStatusFilter = 'All' | RiderStatus;
 
@@ -16,6 +16,7 @@ export interface RidersToolbarProps {
   selectedStatus: RiderStatusFilter;
   onStatusChange: (status: RiderStatusFilter) => void;
   statusCounts: Record<RiderStatusFilter, number>;
+  eventOptions?: string[];
 }
 
 export const RidersToolbar: React.FC<RidersToolbarProps> = ({
@@ -26,8 +27,10 @@ export const RidersToolbar: React.FC<RidersToolbarProps> = ({
   selectedStatus,
   onStatusChange,
   statusCounts,
+  eventOptions,
 }) => {
   const statusOptions: RiderStatusFilter[] = ['All', 'Registered', 'Active', 'Finished', 'DNF'];
+  const eventList = eventOptions && eventOptions.length > 0 ? eventOptions : ['All Events'];
 
   return (
     <Box
@@ -142,7 +145,7 @@ export const RidersToolbar: React.FC<RidersToolbarProps> = ({
               },
             }}
           >
-            {MOCK_EVENTS_LIST.map((evt) => (
+            {eventList.map((evt) => (
               <option key={evt} value={evt}>
                 {evt}
               </option>

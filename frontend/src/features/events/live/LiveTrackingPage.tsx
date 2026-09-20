@@ -18,7 +18,8 @@ import {
   LiveCheckpointProgressItem,
   RecentScanItem,
 } from './mockLiveTrackingData';
-import { liveTrackingService } from '../../../api/services';
+import { CheckpointRouteTimeline } from '../../../components/routes/CheckpointRouteTimeline';
+import { liveTrackingService, eventService, checkpointService, CheckpointItem } from '../../../api/services';
 
 export interface LiveTrackingPageProps {
   eventId?: string;
@@ -43,8 +44,13 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const [checkpointsList, setCheckpointsList] = useState<LiveCheckpointProgressItem[]>([]);
   const [recentScansList, setRecentScansList] = useState<RecentScanItem[]>([]);
   const [ridersList, setRidersList] = useState<LiveRiderItem[]>([]);
+  const [eventInfo, setEventInfo] = useState<{ name: string; date: string; location: string; distanceKm: number } | null>(null);
+  const [startLocation, setStartLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [finishLocation, setFinishLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [rawCheckpoints, setRawCheckpoints] = useState<CheckpointItem[]>([]);
   const [, setLoading] = useState<boolean>(Boolean(eventId));
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [liveRefreshTick, setLiveRefreshTick] = useState<number>(0);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -71,7 +77,17 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     };
   }, []);
 
-  // Fetch real telemetry from backend
+  useEffect(() => {
+    if (!eventId) return;
+
+    const refreshTimer = window.setInterval(() => {
+      setLiveRefreshTick((tick) => tick + 1);
+    }, 5000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [eventId]);
+
+  // Fetch real telemetry and event details from backend
   useEffect(() => {
     let isMounted = true;
     if (!eventId) {
@@ -79,11 +95,33 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       setCheckpointsList([]);
       setRecentScansList([]);
       setRidersList([]);
+      setEventInfo(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    Promise.all([
+      eventService.getEvent(eventId).catch(() => null),
+      checkpointService.listCheckpoints(eventId).catch(() => []),
+    ])
+      .then(([ev, cps]) => {
+        if (isMounted && ev) {
+          setEventInfo({
+            name: ev.eventName || '',
+            date: ev.rideDate || '',
+            location: ev.location || '',
+            distanceKm: ev.rideDistance || 0,
+          });
+          if (ev.startLocation) setStartLocation(ev.startLocation);
+          if (ev.finishLocation) setFinishLocation(ev.finishLocation);
+        }
+        if (isMounted && Array.isArray(cps)) {
+          setRawCheckpoints(cps);
+        }
+      })
+      .catch(() => {});
+
     liveTrackingService
       .getLiveTracking(eventId)
       .then((data) => {
@@ -180,7 +218,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [eventId]);
+  }, [eventId, liveRefreshTick]);
 
   // Checkpoint filter options
   const checkpointOptions = useMemo(() => {
@@ -234,6 +272,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       {/* 1. Page Header with Breadcrumbs, Live Status Pill & Refresh Time */}
       <LiveTrackingHeader
         onBackToEvent={onBackToEvent}
+        eventName={eventInfo?.name}
+        eventDate={eventInfo?.date}
+        location={eventInfo?.location}
+        distanceKm={eventInfo?.distanceKm}
         lastUpdatedText="Just now"
       />
 
@@ -265,6 +307,16 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
             <RecentScanActivity scans={recentScansList} />
           </Box>
 
+          {/* Section 2.5: Rider Route Timeline */}
+          <CheckpointRouteTimeline
+            readOnly={true}
+            startLocation={startLocation}
+            finishLocation={finishLocation}
+            checkpoints={rawCheckpoints}
+            title={`${eventInfo?.name || 'Rider Route'} — Checkpoint Route Timeline`}
+            subtitle="Official ordered checkpoints from START to FINISH"
+          />
+
           {/* Section 3: Rider Status Table with Filter Toolbar */}
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <LiveTrackingFilters
@@ -289,6 +341,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         open={Boolean(selectedRider)}
         onClose={handleCloseDrawer}
         rider={selectedRider}
+        eventName={eventInfo?.name}
       />
 
       {/* Toast feedback */}

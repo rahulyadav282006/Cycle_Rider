@@ -1,15 +1,12 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import BoltIcon from '@mui/icons-material/Bolt';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CropFreeIcon from '@mui/icons-material/CropFree';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
-import { colors } from '../../theme/colors';
-import { RideButton } from '../ui/RideButton';
 
 export interface QuickActionsProps {
-  onActionClick?: (action: { title: string; route: string; desc: string }) => void;
   onCreateEvent?: () => void;
   onRegisterRider?: () => void;
   onOpenScanner?: () => void;
@@ -17,7 +14,6 @@ export interface QuickActionsProps {
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
-  onActionClick,
   onCreateEvent,
   onRegisterRider,
   onOpenScanner,
@@ -26,160 +22,182 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   return (
     <Box
       sx={{
-        backgroundColor: colors.surface.card,
-        border: `1px solid ${colors.surface.border}`,
-        borderRadius: '8px',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: '12px',
         p: { xs: 2, sm: 2.5 },
         mb: 3,
-        boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.03)',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
       }}
     >
+      {/* Title */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          mb: 1.75,
+          mb: 2,
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 24,
-            height: 24,
-            borderRadius: '4px',
-            backgroundColor: colors.brand.accentLight,
-            color: colors.brand.accent,
-          }}
-        >
-          <BoltOutlinedIcon sx={{ fontSize: 16 }} />
-        </Box>
+        <BoltIcon sx={{ fontSize: 20, color: '#14B8A6' }} />
         <Typography
           variant="h3"
           sx={{
-            fontSize: '0.875rem',
+            fontSize: '0.95rem',
             fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: colors.text.secondary,
+            color: '#0F172A',
           }}
         >
           Quick Actions
         </Typography>
       </Box>
 
-      {/* Action Buttons Grid */}
+      {/* Action Buttons Row */}
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
-            md: 'auto auto auto auto',
+            md: 'repeat(4, 1fr)',
           },
-          gap: 1.5,
-          alignItems: 'center',
+          gap: 2,
         }}
       >
-        {/* 1. Create Event (Primary Action) */}
-        <RideButton
-          variant="primary"
-          size="md"
-          startIcon={<AddCircleIcon />}
-          onClick={() => {
-            if (onCreateEvent) {
-              onCreateEvent();
-            } else if (onActionClick) {
-              onActionClick({
-                title: 'Create Event',
-                route: '/events/create',
-                desc: 'This will launch the multi-step event creation workflow for course mapping, date settings, and entry quotas.',
-              });
-            }
-          }}
+        {/* 1. Create Event (Solid Teal Primary) */}
+        <Box
+          component="button"
+          type="button"
+          onClick={onCreateEvent}
           sx={{
-            minHeight: 44, // Minimum touch target 44px
-            fontWeight: 700,
-            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.12)',
-            whiteSpace: 'nowrap',
+            minHeight: 46,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            px: 2,
+            py: 1.25,
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: '#135F63',
+            color: '#FFFFFF',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'background-color 0.15s ease, transform 0.1s ease',
+            '&:hover': {
+              backgroundColor: '#0E4E52',
+            },
+            '&:active': {
+              transform: 'scale(0.99)',
+            },
           }}
         >
+          <AddCircleIcon sx={{ fontSize: 18 }} />
           Create Event
-        </RideButton>
+        </Box>
 
-        {/* 2. Register Rider (Secondary Action) */}
-        <RideButton
-          variant="secondary"
-          size="md"
-          startIcon={<DirectionsBikeIcon />}
-          onClick={() => {
-            if (onRegisterRider) {
-              onRegisterRider();
-            } else if (onActionClick) {
-              onActionClick({
-                title: 'Register Rider',
-                route: '/riders/register',
-                desc: 'This will open rider onboarding to assign bib numbers, record emergency contacts, and confirm category entries.',
-              });
-            }
-          }}
+        {/* 2. Register Rider */}
+        <Box
+          component="button"
+          type="button"
+          onClick={onRegisterRider}
           sx={{
-            minHeight: 44, // Minimum touch target 44px
-            whiteSpace: 'nowrap',
+            minHeight: 46,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            px: 2,
+            py: 1.25,
+            borderRadius: '8px',
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
+            color: '#334155',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              backgroundColor: '#F8FAFC',
+              borderColor: '#CBD5E1',
+            },
+            '&:active': {
+              transform: 'scale(0.99)',
+            },
           }}
         >
+          <PersonOutlineOutlinedIcon sx={{ fontSize: 20, color: '#135F63' }} />
           Register Rider
-        </RideButton>
+        </Box>
 
-        {/* 3. Open Scanner (Secondary Action) */}
-        <RideButton
-          variant="secondary"
-          size="md"
-          startIcon={<QrCodeScannerIcon />}
-          onClick={() => {
-            if (onOpenScanner) {
-              onOpenScanner();
-            } else if (onActionClick) {
-              onActionClick({
-                title: 'Open Scanner',
-                route: '/volunteer/scanner',
-                desc: 'This will launch the camera scanner station to log checkpoint passes, start gun times, and finish line stamps.',
-              });
-            }
-          }}
+        {/* 3. Open Scanner */}
+        <Box
+          component="button"
+          type="button"
+          onClick={onOpenScanner}
           sx={{
-            minHeight: 44, // Minimum touch target 44px
-            whiteSpace: 'nowrap',
+            minHeight: 46,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            px: 2,
+            py: 1.25,
+            borderRadius: '8px',
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
+            color: '#334155',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              backgroundColor: '#F8FAFC',
+              borderColor: '#CBD5E1',
+            },
+            '&:active': {
+              transform: 'scale(0.99)',
+            },
           }}
         >
+          <CropFreeIcon sx={{ fontSize: 20, color: '#135F63' }} />
           Open Scanner
-        </RideButton>
+        </Box>
 
-        {/* 4. Reports (Secondary Action) */}
-        <RideButton
-          variant="secondary"
-          size="md"
-          startIcon={<BarChartIcon />}
-          onClick={() => {
-            if (onNavigateReports) {
-              onNavigateReports();
-            } else if (onActionClick) {
-              onActionClick({
-                title: 'Reports',
-                route: '/reports',
-                desc: 'This will generate participation breakdown, checkpoint throughput, and exportable rider completion statistics.',
-              });
-            }
-          }}
+        {/* 4. Reports */}
+        <Box
+          component="button"
+          type="button"
+          onClick={onNavigateReports}
           sx={{
-            minHeight: 44, // Minimum touch target 44px
-            whiteSpace: 'nowrap',
+            minHeight: 46,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            px: 2,
+            py: 1.25,
+            borderRadius: '8px',
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#FFFFFF',
+            color: '#334155',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              backgroundColor: '#F8FAFC',
+              borderColor: '#CBD5E1',
+            },
+            '&:active': {
+              transform: 'scale(0.99)',
+            },
           }}
         >
+          <BarChartIcon sx={{ fontSize: 20, color: '#135F63' }} />
           Reports
-        </RideButton>
+        </Box>
       </Box>
     </Box>
   );

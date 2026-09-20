@@ -37,6 +37,8 @@ export const AddCheckpointPage: React.FC<AddCheckpointPageProps> = ({
   const [type, setType] = useState<CheckpointType>('Checkpoint');
   const [sequence, setSequence] = useState<string>('');
   const [requirement, setRequirement] = useState<CheckpointRequirement>('Mandatory');
+  const [latitude, setLatitude] = useState<string>('');
+  const [longitude, setLongitude] = useState<string>('');
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -71,6 +73,8 @@ export const AddCheckpointPage: React.FC<AddCheckpointPageProps> = ({
           sequenceNumber: Number(sequence) || 1,
           type: type,
           mandatory: requirement === 'Mandatory',
+          latitude: latitude && !isNaN(Number(latitude)) ? Number(latitude) : undefined,
+          longitude: longitude && !isNaN(Number(longitude)) ? Number(longitude) : undefined,
         });
       }
       setIsSuccess(true);
@@ -378,6 +382,73 @@ export const AddCheckpointPage: React.FC<AddCheckpointPageProps> = ({
                   disabled={isSubmitting}
                 />
               </RadioGroup>
+            </Box>
+
+            {/* Field 5: GPS Coordinates (Optional) */}
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                sx={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: colors.text.primary,
+                  mb: 1,
+                }}
+              >
+                GPS Coordinates (Optional Pin Location)
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <Box
+                  component="input"
+                  id="checkpoint-lat-input"
+                  type="number"
+                  step="any"
+                  disabled={isSubmitting}
+                  value={latitude}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLatitude(e.target.value)}
+                  placeholder="Latitude (e.g. 28.6139)"
+                  sx={{
+                    width: '100%',
+                    height: 44,
+                    px: 1.5,
+                    fontSize: '0.875rem',
+                    color: colors.text.primary,
+                    backgroundColor: colors.surface.card,
+                    border: `1px solid ${colors.surface.borderStrong}`,
+                    borderRadius: '6px',
+                    outline: 'none',
+                    '&:focus': {
+                      borderColor: colors.brand.accent,
+                      boxShadow: '0 0 0 2px rgba(2, 132, 199, 0.15)',
+                    },
+                  }}
+                />
+                <Box
+                  component="input"
+                  id="checkpoint-lng-input"
+                  type="number"
+                  step="any"
+                  disabled={isSubmitting}
+                  value={longitude}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLongitude(e.target.value)}
+                  placeholder="Longitude (e.g. 77.2090)"
+                  sx={{
+                    width: '100%',
+                    height: 44,
+                    px: 1.5,
+                    fontSize: '0.875rem',
+                    color: colors.text.primary,
+                    backgroundColor: colors.surface.card,
+                    border: `1px solid ${colors.surface.borderStrong}`,
+                    borderRadius: '6px',
+                    outline: 'none',
+                    '&:focus': {
+                      borderColor: colors.brand.accent,
+                      boxShadow: '0 0 0 2px rgba(2, 132, 199, 0.15)',
+                    },
+                  }}
+                />
+              </Box>
             </Box>
 
             {/* Action Buttons */}

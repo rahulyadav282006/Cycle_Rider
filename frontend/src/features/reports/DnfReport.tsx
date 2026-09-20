@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -10,37 +10,106 @@ import {
   TableContainer,
 } from '@mui/material';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import { colors } from '../../theme/colors';
 import { ReportSummaryCards } from './ReportSummaryCards';
 import { ReportToolbar } from './ReportToolbar';
-import { MOCK_REPORT_DNF, MOCK_REPORT_EVENT } from './mockReportsData';
+import { reportService, eventService } from '../../api/services';
 
 export interface DnfReportProps {
+  eventId?: string;
   onBackToReports: () => void;
   onExport: (format: 'CSV' | 'Excel') => void;
 }
 
 export const DnfReport: React.FC<DnfReportProps> = ({
+  eventId,
   onBackToReports,
   onExport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [dnfList, setDnfList] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [eventData, setEventData] = useState<{
+    name: string;
+    date: string;
+    location: string;
+    totalRegistered: number;
+  }>({
+    name: 'Event',
+    date: '',
+    location: '',
+    totalRegistered: 0,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    if (eventId) {
+      setLoading(true);
+      Promise.all([
+        eventService.getEvent(eventId).catch(() => null),
+        reportService.getReport(eventId, 'dnf').catch(() => null),
+      ])
+        .then(([ev, rep]) => {
+          if (!isMounted) return;
+          if (ev) {
+            setEventData({
+              name: ev.eventName || 'Event',
+              date: ev.rideDate || '',
+              location: ev.location || '',
+              totalRegistered: ev.riderCount || 0,
+            });
+          }
+          if (rep && Array.isArray(rep.items)) {
+            setDnfList(rep.items);
+          } else {
+            setDnfList([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
 
   const filteredDnf = useMemo(() => {
-    return MOCK_REPORT_DNF.filter((item) => {
+    return dnfList.filter((item) => {
       return (
         !searchQuery.trim() ||
-        item.riderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.riderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.jerseyNumber.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.riderId && item.riderId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.jerseyNumber && String(item.jerseyNumber).toLowerCase().includes(searchQuery.toLowerCase()))
       );
     });
-  }, [searchQuery]);
+  }, [dnfList, searchQuery]);
+
+  const dnfRate =
+    eventData.totalRegistered > 0
+      ? `${Math.round((dnfList.length / eventData.totalRegistered) * 100)}%`
+      : '0%';
 
   const summaryCards = [
-    { label: 'TOTAL DNF RIDERS', value: 14, color: colors.status.error.dot, helper: 'Did not finish course' },
-    { label: 'DNF RATE', value: '4.1%', color: '#991B1B', helper: 'Of 342 registered riders' },
-    { label: 'LAST SWEPT STATION', value: 'Lunch (CP 06)', color: colors.text.secondary, helper: 'Route sweep active' },
+    {
+      label: 'TOTAL DNF RIDERS',
+      value: dnfList.length,
+      color: dnfList.length > 0 ? colors.status.error.dot : '#059669',
+      helper: 'Did not finish course',
+    },
+    {
+      label: 'DNF RATE',
+      value: dnfRate,
+      color: dnfList.length > 0 ? '#991B1B' : colors.primary.main,
+      helper: `Of ${eventData.totalRegistered} registered riders`,
+    },
+    {
+      label: 'SWEEP VEHICLE STATUS',
+      value: dnfList.length === 0 ? 'All Clear' : 'Sweep Active',
+      color: colors.text.secondary,
+      helper: 'Rider safety tracking',
+    },
   ];
 
   return (
@@ -60,7 +129,7 @@ export const DnfReport: React.FC<DnfReportProps> = ({
           DNF Riders
         </Typography>
         <Typography sx={{ fontSize: '0.875rem', color: colors.text.secondary }}>
-          {MOCK_REPORT_EVENT.name} • {MOCK_REPORT_EVENT.date} • Riders who did not complete the route
+          {eventData.name} {eventData.date ? `• ${eventData.date}` : ''} • Recorded Incomplete Rides
         </Typography>
       </Box>
 
@@ -71,7 +140,7 @@ export const DnfReport: React.FC<DnfReportProps> = ({
       <ReportToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search DNF rider by name, ID, or jersey..."
+        searchPlaceholder="Search DNF riders by name, ID, or jersey..."
         onExportCsv={() => onExport('CSV')}
         onExportExcel={() => onExport('Excel')}
         onBackToReports={onBackToReports}
@@ -102,10 +171,10 @@ export const DnfReport: React.FC<DnfReportProps> = ({
                   JERSEY NUMBER
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
-                  LAST CHECKPOINT
+                  LAST RECORDED CHECKPOINT
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
-                  LAST SCAN
+                  REPORTED REASON
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: colors.text.secondary, py: 1.5 }}>
                   STATUS
@@ -113,52 +182,69 @@ export const DnfReport: React.FC<DnfReportProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredDnf.map((rider) => (
-                <TableRow
-                  key={rider.id}
-                  sx={{
-                    '&:last-child td': { borderBottom: 0 },
-                    '&:hover': { backgroundColor: colors.surface.page },
-                    transition: 'background-color 0.15s ease',
-                  }}
-                >
-                  <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace, monospace', color: colors.status.error.dot, py: 1.5 }}>
-                    {rider.riderId}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: colors.text.secondary }}>
+                    Loading DNF incident records...
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
-                    {rider.riderName}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
-                    {rider.jerseyNumber}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.875rem', color: colors.text.secondary, py: 1.5 }}>
-                    {rider.lastCheckpoint}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8125rem', color: colors.text.secondary, py: 1.5 }}>
-                    {rider.lastScan}
-                  </TableCell>
-                  <TableCell sx={{ py: 1.5 }}>
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        backgroundColor: '#FEF2F2',
-                        color: '#991B1B',
-                        border: '1px solid #FECACA',
-                      }}
-                    >
-                      <WarningAmberOutlinedIcon sx={{ fontSize: 13, color: '#DC2626' }} />
-                      {rider.status}
+                </TableRow>
+              ) : filteredDnf.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: colors.text.secondary }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                      <CheckCircleOutlinedIcon sx={{ color: '#059669', fontSize: 20 }} />
+                      <span>No DNF incidents reported for this event. All riders completed or active.</span>
                     </Box>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredDnf.map((item, idx) => (
+                  <TableRow
+                    key={item.riderId || idx}
+                    sx={{
+                      '&:last-child td': { borderBottom: 0 },
+                      '&:hover': { backgroundColor: colors.surface.page },
+                      transition: 'background-color 0.15s ease',
+                    }}
+                  >
+                    <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace', color: colors.primary.main, py: 1.5 }}>
+                      {item.riderId}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
+                      {item.name}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.8125rem', fontWeight: 600, color: colors.text.primary, py: 1.5 }}>
+                      #{item.jerseyNumber}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem', color: colors.text.secondary, py: 1.5 }}>
+                      {item.lastCheckpoint || 'Start'}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem', color: colors.text.secondary, py: 1.5 }}>
+                      {item.reason || 'Withdrew'}
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          backgroundColor: '#FEF2F2',
+                          color: colors.status.error.dot,
+                          border: '1px solid #FECACA',
+                        }}
+                      >
+                        <WarningAmberOutlinedIcon sx={{ fontSize: 13, color: colors.status.error.dot }} />
+                        DNF
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

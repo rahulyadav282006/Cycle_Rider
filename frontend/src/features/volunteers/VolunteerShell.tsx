@@ -6,7 +6,6 @@ import {
   IconButton,
   Drawer,
 } from '@mui/material';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import QrCodeScannerOutlinedIcon from '@mui/icons-material/QrCodeScannerOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -16,6 +15,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { colors } from '../../theme/colors';
 import { RideIconButton } from '../../components/ui/RideButton';
+import { getStoredUser } from '../../api/client';
 
 export interface VolunteerShellProps {
   children: React.ReactNode;
@@ -33,6 +33,16 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
   onLogout,
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
+  const currentUser = getStoredUser();
+  const volunteerName: string = currentUser?.name || currentUser?.email || 'Volunteer';
+  const volunteerInitials = (
+    volunteerName
+      .split(' ')
+      .map((p: string) => p[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
+  ) || 'V';
 
   const navItems = [
     { id: 'home' as const, label: 'Home', icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} /> },
@@ -86,21 +96,19 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
           </IconButton>
 
           <Box
+            component="img"
+            src="/ridetrack-emblem.png"
+            alt="RideTrack"
             sx={{
-              width: 28,
-              height: 28,
-              borderRadius: '6px',
-              backgroundColor: colors.brand.accent,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
+              height: 24,
+              width: 'auto',
+              borderRadius: '5px',
+              objectFit: 'contain',
+              display: 'block',
             }}
-          >
-            <DirectionsBikeIcon sx={{ fontSize: 16 }} />
-          </Box>
+          />
 
-          <Typography sx={{ fontWeight: 800, fontSize: '0.9375rem', color: colors.text.primary }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: colors.text.primary, letterSpacing: '-0.02em' }}>
             RideTrack
           </Typography>
 
@@ -148,7 +156,8 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
             sx: {
               width: 260,
               backgroundColor: colors.surface.sidebar,
-              color: '#FFFFFF',
+              color: colors.text.primary,
+              borderRight: `1px solid ${colors.surface.sidebarBorder}`,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
@@ -164,33 +173,35 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottom: `1px solid ${colors.surface.sidebarBorder}`,
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
               <Box
+                component="img"
+                src="/ridetrack-emblem.png"
+                alt="RideTrack"
                 sx={{
-                  width: 32,
-                  height: 32,
+                  height: 30,
+                  width: 'auto',
                   borderRadius: '6px',
-                  backgroundColor: colors.brand.accent,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
+                  objectFit: 'contain',
                 }}
-              >
-                <DirectionsBikeIcon sx={{ fontSize: 18 }} />
+              />
+              <Box>
+                <Typography sx={{ fontWeight: 800, fontSize: '1.05rem', color: colors.text.primary, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                  RideTrack
+                </Typography>
+                <Typography sx={{ fontSize: '0.6875rem', fontWeight: 700, color: '#135F63', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  Volunteer Portal
+                </Typography>
               </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#FFFFFF' }}>
-                RideTrack
-              </Typography>
             </Box>
 
             <IconButton
               size="small"
               onClick={() => setMobileDrawerOpen(false)}
-              sx={{ color: colors.text.inverseMuted }}
+              sx={{ color: colors.text.secondary }}
             >
               <CloseIcon />
             </IconButton>
@@ -201,8 +212,8 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
             <Typography
               sx={{
                 fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: colors.text.inverseMuted,
+                fontWeight: 800,
+                color: '#52796F',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
               }}
@@ -212,7 +223,7 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
           </Box>
 
           {/* Nav list */}
-          <Box sx={{ px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {navItems.map((item) => {
               const isActive = activeNavId === item.id;
               return (
@@ -225,20 +236,24 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                     gap: 1.5,
                     px: 1.75,
                     py: 1.25,
-                    borderRadius: '6px',
+                    borderRadius: '10px',
                     cursor: 'pointer',
-                    backgroundColor: isActive ? 'rgba(2, 132, 199, 0.2)' : 'transparent',
-                    color: isActive ? '#FFFFFF' : colors.text.inverseMuted,
-                    fontWeight: isActive ? 700 : 500,
-                    borderLeft: isActive ? `3px solid ${colors.brand.accent}` : '3px solid transparent',
+                    backgroundColor: isActive ? '#D5E7DB' : 'transparent',
+                    color: isActive ? '#135F63' : '#1F2937',
+                    fontWeight: 800,
+                    transition: 'all 0.15s ease',
                     '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      color: '#FFFFFF',
+                      backgroundColor: isActive ? '#D5E7DB' : 'rgba(0, 0, 0, 0.04)',
+                      color: '#135F63',
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: isActive ? '#135F63' : '#374151',
+                      fontSize: 20,
                     },
                   }}
                 >
                   {item.icon}
-                  <Typography sx={{ fontSize: '0.875rem' }}>{item.label}</Typography>
+                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, color: 'inherit' }}>{item.label}</Typography>
                 </Box>
               );
             })}
@@ -249,20 +264,20 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
         <Box
           sx={{
             p: 2,
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            borderTop: `1px solid ${colors.surface.sidebarBorder}`,
             display: 'flex',
             alignItems: 'center',
             gap: 1.5,
           }}
         >
-          <Avatar sx={{ width: 36, height: 36, bgcolor: colors.brand.accent, fontWeight: 700 }}>
-            DP
+          <Avatar sx={{ width: 36, height: 36, bgcolor: '#135F63', color: '#FFFFFF', fontWeight: 800 }}>
+            {volunteerInitials}
           </Avatar>
           <Box>
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
-              Dipti Patil
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 800, color: colors.text.primary, lineHeight: 1.2 }}>
+              {volunteerName}
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: colors.text.inverseMuted }}>
+            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#52796F' }}>
               Volunteer
             </Typography>
           </Box>
@@ -283,8 +298,8 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
             left: 0,
             top: 0,
             backgroundColor: colors.surface.sidebar,
-            color: '#FFFFFF',
-            borderRight: `1px solid ${colors.brand.primaryLight}`,
+            color: colors.text.primary,
+            borderRight: `1px solid ${colors.surface.sidebarBorder}`,
             flexDirection: 'column',
             justifyContent: 'space-between',
             zIndex: 1100,
@@ -300,45 +315,44 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5,
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                borderBottom: `1px solid ${colors.surface.sidebarBorder}`,
               }}
             >
               <Box
+                component="img"
+                src="/ridetrack-emblem.png"
+                alt="RideTrack Logo"
                 sx={{
-                  width: 34,
                   height: 34,
-                  borderRadius: '6px',
-                  backgroundColor: colors.brand.accent,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
+                  maxWidth: 82,
+                  width: 'auto',
+                  borderRadius: '7px',
+                  objectFit: 'contain',
                   flexShrink: 0,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                 }}
-              >
-                <DirectionsBikeIcon sx={{ fontSize: 20 }} />
-              </Box>
+              />
               <Box>
                 <Typography
                   variant="h3"
                   sx={{
-                    fontSize: '1rem',
+                    fontSize: '1.1rem',
                     fontWeight: 800,
-                    color: '#FFFFFF',
-                    letterSpacing: '-0.01em',
+                    letterSpacing: '-0.02em',
+                    color: colors.text.primary,
                     lineHeight: 1.1,
                   }}
                 >
                   RideTrack
                 </Typography>
                 <Typography
-                  variant="caption"
                   sx={{
                     fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    color: colors.brand.accent,
+                    fontWeight: 700,
+                    color: '#135F63',
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
+                    mt: 0.25,
                   }}
                 >
                   Volunteer Portal
@@ -351,8 +365,8 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
               <Typography
                 sx={{
                   fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  color: colors.text.inverseMuted,
+                  fontWeight: 800,
+                  color: '#52796F',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
@@ -362,7 +376,7 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
             </Box>
 
             {/* Nav list - strictly ONLY Home and Scanner */}
-            <Box sx={{ px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
               {navItems.map((item) => {
                 const isActive = activeNavId === item.id;
                 return (
@@ -378,23 +392,28 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                       gap: 1.5,
                       px: 1.75,
                       py: 1.25,
-                      borderRadius: '6px',
+                      borderRadius: '10px',
                       cursor: 'pointer',
                       border: 'none',
-                      backgroundColor: isActive ? 'rgba(2, 132, 199, 0.2)' : 'transparent',
-                      color: isActive ? '#FFFFFF' : colors.text.inverseMuted,
-                      fontWeight: isActive ? 700 : 500,
-                      borderLeft: isActive ? `3px solid ${colors.brand.accent}` : '3px solid transparent',
+                      backgroundColor: isActive ? '#D5E7DB' : 'transparent',
+                      color: isActive ? '#135F63' : '#1F2937',
+                      fontWeight: 800,
                       transition: 'all 0.15s ease',
                       textAlign: 'left',
                       '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                        color: '#FFFFFF',
+                        backgroundColor: isActive ? '#D5E7DB' : 'rgba(0, 0, 0, 0.04)',
+                        color: '#135F63',
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: isActive ? '#135F63' : '#374151',
+                        fontSize: 22,
                       },
                     }}
                   >
                     {item.icon}
-                    <Typography sx={{ fontSize: '0.875rem' }}>{item.label}</Typography>
+                    <Typography sx={{ fontSize: '0.925rem', fontWeight: 800, color: 'inherit' }}>
+                      {item.label}
+                    </Typography>
                   </Box>
                 );
               })}
@@ -405,48 +424,48 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
           <Box
             sx={{
               p: 2,
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              backgroundColor: 'rgba(0, 0, 0, 0.15)',
+              borderTop: `1px solid ${colors.surface.sidebarBorder}`,
               display: 'flex',
               flexDirection: 'column',
-              gap: 1.25,
+              gap: 1.5,
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
               <Avatar
                 sx={{
-                  width: 36,
-                  height: 36,
-                  fontSize: '0.8125rem',
-                  fontWeight: 700,
-                  backgroundColor: colors.brand.accent,
+                  width: 38,
+                  height: 38,
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  backgroundColor: '#135F63',
                   color: '#FFFFFF',
                 }}
               >
-                AS
+                {volunteerInitials}
               </Avatar>
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography
                   sx={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: '#FFFFFF',
+                    fontSize: '0.875rem',
+                    fontWeight: 800,
+                    color: colors.text.primary,
                     lineHeight: 1.2,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  Amit Shinde
+                  {volunteerName}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: '0.6875rem',
-                    color: colors.text.inverseMuted,
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#52796F',
                     lineHeight: 1.2,
                   }}
                 >
-                  Volunteer &bull; CP1 Start
+                  Volunteer
                 </Typography>
               </Box>
             </Box>
@@ -461,21 +480,21 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 0.75,
-                  py: 0.75,
+                  gap: 1,
+                  py: 1,
                   px: 1.5,
-                  borderRadius: '6px',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                  color: '#FCA5A5',
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.surface.sidebarBorder}`,
+                  backgroundColor: '#FFFFFF',
+                  color: '#DC2626',
                   fontSize: '0.8125rem',
-                  fontWeight: 600,
+                  fontWeight: 800,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.25)',
-                    color: '#FFFFFF',
-                    borderColor: 'rgba(239, 68, 68, 0.6)',
+                    backgroundColor: '#FEE2E2',
+                    borderColor: '#FCA5A5',
+                    color: '#B91C1C',
                   },
                 }}
               >
@@ -516,7 +535,18 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
             }}
           >
             {/* Left: Branding & Role */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
+                component="img"
+                src="/ridetrack-emblem.png"
+                alt="RideTrack"
+                sx={{
+                  height: 24,
+                  width: 'auto',
+                  borderRadius: '5px',
+                  objectFit: 'contain',
+                }}
+              />
               <Typography
                 sx={{
                   fontSize: '1rem',
@@ -583,7 +613,7 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                     color: '#FFFFFF',
                   }}
                 >
-                  DP
+                  {volunteerInitials}
                 </Avatar>
                 <Box>
                   <Typography
@@ -594,7 +624,7 @@ export const VolunteerShell: React.FC<VolunteerShellProps> = ({
                       lineHeight: 1.2,
                     }}
                   >
-                    Dipti Patil
+                    {volunteerName}
                   </Typography>
                   <Typography
                     sx={{

@@ -68,6 +68,15 @@ class EventCreateRequest(BaseModel):
     startTime: str
     organizerName: Optional[str] = "RideTrack Organizer"
     status: EventStatus = EventStatus.UPCOMING
+    routePoints: Optional[List[dict]] = None
+    routeGeometry: Optional[List[List[float]]] = None
+    startLocation: Optional[dict] = None  # {"name": str, "lat": float, "lng": float}
+    finishLocation: Optional[dict] = None  # {"name": str, "lat": float, "lng": float}
+    orderedCheckpointIds: Optional[List[str]] = None
+    distanceKm: Optional[float] = None
+    estimatedDurationMinutes: Optional[float] = None
+    routeProfile: Optional[str] = "cycling"
+    paymentRequired: Optional[bool] = False
 
 class EventUpdateRequest(BaseModel):
     eventName: Optional[str] = None
@@ -78,6 +87,15 @@ class EventUpdateRequest(BaseModel):
     startTime: Optional[str] = None
     organizerName: Optional[str] = None
     status: Optional[EventStatus] = None
+    routePoints: Optional[List[dict]] = None
+    routeGeometry: Optional[List[List[float]]] = None
+    startLocation: Optional[dict] = None
+    finishLocation: Optional[dict] = None
+    orderedCheckpointIds: Optional[List[str]] = None
+    distanceKm: Optional[float] = None
+    estimatedDurationMinutes: Optional[float] = None
+    routeProfile: Optional[str] = None
+    paymentRequired: Optional[bool] = None
 
 class EventResponse(BaseModel):
     id: str
@@ -93,6 +111,15 @@ class EventResponse(BaseModel):
     riderCount: int = 0
     checkpointCount: int = 0
     volunteerCount: int = 0
+    routePoints: Optional[List[dict]] = None
+    routeGeometry: Optional[List[List[float]]] = None
+    startLocation: Optional[dict] = None
+    finishLocation: Optional[dict] = None
+    orderedCheckpointIds: Optional[List[str]] = None
+    distanceKm: Optional[float] = None
+    estimatedDurationMinutes: Optional[float] = None
+    routeProfile: Optional[str] = None
+    paymentRequired: Optional[bool] = False
     createdAt: str
     updatedAt: str
 
@@ -104,12 +131,18 @@ class CheckpointCreateRequest(BaseModel):
     type: str = "Standard"
     sequenceNumber: int
     mandatory: bool = True
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: Optional[str] = None
 
 class CheckpointUpdateRequest(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
     sequenceNumber: Optional[int] = None
     mandatory: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: Optional[str] = None
 
 class CheckpointResponse(BaseModel):
     id: str
@@ -118,6 +151,9 @@ class CheckpointResponse(BaseModel):
     type: str
     sequenceNumber: int
     mandatory: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: Optional[str] = None
     createdAt: str
     updatedAt: str
 
@@ -135,6 +171,7 @@ class RiderCreateRequest(BaseModel):
     bicycleType: Optional[str] = "Road Bike"
     jerseyNumber: Optional[int | str] = 101
     medicalNotes: Optional[str] = "None reported"
+    paymentStatus: Optional[str] = "pending"
 
 class RiderUpdateRequest(BaseModel):
     name: Optional[str] = None
@@ -148,6 +185,7 @@ class RiderUpdateRequest(BaseModel):
     jerseyNumber: Optional[int | str] = None
     medicalNotes: Optional[str] = None
     status: Optional[str] = None
+    paymentStatus: Optional[str] = None
 
 class RiderResponse(BaseModel):
     id: str
@@ -165,9 +203,14 @@ class RiderResponse(BaseModel):
     medicalNotes: str
     qrCodeValue: str
     status: str = "Registered"
+    paymentStatus: Optional[str] = "pending"
+    paymentRequired: Optional[bool] = False
     createdAt: str
     updatedAt: str
     timeline: Optional[List[dict]] = []
+
+class RiderPaymentUpdateRequest(BaseModel):
+    paymentStatus: str
 
 # --------------------------------------------------
 # VOLUNTEER SCHEMAS
@@ -201,12 +244,29 @@ class VolunteerResponse(BaseModel):
 # --------------------------------------------------
 # SCAN SCHEMAS
 # --------------------------------------------------
+class ScanValidateRequest(BaseModel):
+    riderId: str
+    eventId: str
+    checkpointId: str
+
+class ScanValidateResponse(BaseModel):
+    riderId: str
+    riderName: str
+    jerseyNumber: str
+    eventId: str
+    eventName: str
+    checkpointId: str
+    checkpointName: str
+    scanTime: str
+
 class ScanRecordRequest(BaseModel):
     clientScanId: str
     riderId: str
     eventId: str
     checkpointId: str
     scanTime: Optional[str] = None
+    deviceLatitude: Optional[float] = None
+    deviceLongitude: Optional[float] = None
 
 class ScanResponse(BaseModel):
     id: str
@@ -221,6 +281,10 @@ class ScanResponse(BaseModel):
     volunteerId: str
     scanTime: str
     status: str = "Recorded"
+    checkpointLatitude: Optional[float] = None
+    checkpointLongitude: Optional[float] = None
+    deviceLatitude: Optional[float] = None
+    deviceLongitude: Optional[float] = None
     createdAt: str
 
 # --------------------------------------------------

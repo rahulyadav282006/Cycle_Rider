@@ -26,6 +26,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [internalActiveId, setInternalActiveId] = useState<string>(activeNavId);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('ridetrack_sidebar_collapsed') === 'true';
+  });
 
   const currentActiveId = onNavChange ? activeNavId : internalActiveId;
 
@@ -37,6 +40,16 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   };
 
+  const handleToggleSidebar = () => {
+    setDesktopSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('ridetrack_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  const currentSidebarWidth = desktopSidebarCollapsed ? 72 : 240;
+
   return (
     <Box
       sx={{
@@ -44,7 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         backgroundColor: colors.surface.page,
         display: 'flex',
         flexDirection: 'column',
-        overflowX: 'hidden', // Guarantee no horizontal page overflow
+        overflowX: 'hidden',
         position: 'relative',
       }}
     >
@@ -62,8 +75,21 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* 3. Desktop Layout Body */}
       <Box sx={{ display: 'flex', flex: 1, minHeight: '100vh' }}>
         {/* Desktop Fixed Sidebar (Hidden on < md) */}
-        <Box sx={{ display: { xs: 'none', md: 'block' }, width: 250, flexShrink: 0 }}>
-          <Sidebar activeId={currentActiveId} onNavigate={handleNavigate} onLogout={onLogout} />
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            width: currentSidebarWidth,
+            flexShrink: 0,
+            transition: 'width 0.2s ease-in-out',
+          }}
+        >
+          <Sidebar
+            activeId={currentActiveId}
+            onNavigate={handleNavigate}
+            onLogout={onLogout}
+            collapsed={desktopSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
+          />
         </Box>
 
         {/* Main Content Column */}
@@ -73,13 +99,18 @@ export const AppShell: React.FC<AppShellProps> = ({
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            minWidth: 0, // Prevents flex child from overflowing horizontally
-            pb: { xs: '64px', md: 0 }, // Space for mobile bottom nav
+            minWidth: 0,
+            pb: { xs: '64px', md: 0 },
+            transition: 'all 0.2s ease-in-out',
           }}
         >
           {/* Desktop Top Header (Hidden on < md) */}
           <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-            <TopHeader pageTitle={pageTitle} breadcrumb={breadcrumb} />
+            <TopHeader
+              pageTitle={pageTitle}
+              breadcrumb={breadcrumb}
+              onToggleSidebar={handleToggleSidebar}
+            />
           </Box>
 
           {/* Page Viewport Area */}

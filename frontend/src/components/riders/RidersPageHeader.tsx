@@ -1,10 +1,7 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
-import { colors } from '../../theme/colors';
-import { RideButton } from '../ui/RideButton';
+import { PageHeroBanner } from '../common/PageHeroBanner';
 
 export interface RidersPageHeaderProps {
   onRegisterRider: () => void;
@@ -12,91 +9,40 @@ export interface RidersPageHeaderProps {
   onToggleEmptyState?: () => void;
 }
 
-export const RidersPageHeader: React.FC<RidersPageHeaderProps> = ({
-  onRegisterRider,
-  isEmptyState = false,
-  onToggleEmptyState,
-}) => {
+export const RidersPageHeader: React.FC<RidersPageHeaderProps> = ({ onRegisterRider }) => {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'flex-start', sm: 'center' },
-        justifyContent: 'space-between',
-        gap: 2,
-        mb: 3,
-      }}
-    >
-      {/* Title & Supporting Subtitle */}
-      <Box>
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: { xs: '1.5rem', sm: '1.75rem' },
-            fontWeight: 700,
-            color: colors.text.primary,
-            letterSpacing: '-0.02em',
-            lineHeight: 1.2,
-            mb: 0.5,
-          }}
-        >
-          Riders
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: '0.875rem',
-            color: colors.text.secondary,
-            lineHeight: 1.4,
-          }}
-        >
-          Register and manage riders for your cycling events.
-        </Typography>
-      </Box>
-
-      {/* Right Side Actions: Empty State Switcher + [ + Register Rider ] CTA */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          width: { xs: '100%', sm: 'auto' },
-          justifyContent: { xs: 'space-between', sm: 'flex-end' },
-          flexWrap: 'wrap',
-        }}
-      >
-        {onToggleEmptyState && (
-          <RideButton
-            variant="secondary"
-            size="sm"
-            onClick={onToggleEmptyState}
-            startIcon={isEmptyState ? <LayersOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
-            sx={{
-              minHeight: 40,
-              fontSize: '0.8125rem',
-              whiteSpace: 'nowrap',
-              borderColor: colors.surface.borderStrong,
-            }}
-          >
-            {isEmptyState ? 'Populated View' : 'Preview Empty State'}
-          </RideButton>
-        )}
-
-        <RideButton
-          variant="primary"
-          size="md"
-          startIcon={<PersonAddOutlinedIcon />}
+    <PageHeroBanner
+      title="Riders"
+      subtitle="Register and manage riders for your cycling events."
+      actionButton={
+        <Box
+          component="button"
+          type="button"
           onClick={onRegisterRider}
           sx={{
-            minHeight: 44, // Minimum 44px touch target
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 2.5,
+            py: 1.25,
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: '#135F63',
+            color: '#FFFFFF',
+            fontSize: '0.875rem',
             fontWeight: 700,
-            whiteSpace: 'nowrap',
-            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.12)',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              backgroundColor: '#0E484B',
+            },
           }}
         >
-          + Register Rider
-        </RideButton>
-      </Box>
-    </Box>
+          <PersonAddOutlinedIcon sx={{ fontSize: 18 }} />
+          Register Rider
+        </Box>
+      }
+    />
   );
 };

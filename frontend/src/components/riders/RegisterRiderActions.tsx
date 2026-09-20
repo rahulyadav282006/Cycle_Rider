@@ -44,6 +44,7 @@ export const RegisterRiderActions: React.FC<RegisterRiderActionsProps> = ({
 
       {/* Register Rider Primary Button */}
       <RideButton
+        id="btn-submit-rider-registration"
         variant="primary"
         size="md"
         disabled={isSubmitting}

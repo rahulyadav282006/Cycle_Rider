@@ -54,6 +54,15 @@ async def list_events(
             riderCount=rider_cnt,
             checkpointCount=cp_cnt,
             volunteerCount=vol_cnt,
+            routePoints=ev.get("routePoints"),
+            routeGeometry=ev.get("routeGeometry"),
+            startLocation=ev.get("startLocation"),
+            finishLocation=ev.get("finishLocation"),
+            orderedCheckpointIds=ev.get("orderedCheckpointIds", []),
+            distanceKm=ev.get("distanceKm"),
+            estimatedDurationMinutes=ev.get("estimatedDurationMinutes"),
+            routeProfile=ev.get("routeProfile"),
+            paymentRequired=bool(ev.get("paymentRequired") or ev.get("payment_required", False)),
             createdAt=ev.get("createdAt", ""),
             updatedAt=ev.get("updatedAt", ""),
         ).model_dump())
@@ -86,6 +95,16 @@ async def create_event(
         "organizerId": current_user["id"],
         "organizerName": current_user.get("name", req.organizerName or "RideTrack Organizer"),
         "status": req.status.value if hasattr(req.status, "value") else str(req.status),
+        "routePoints": req.routePoints if req.routePoints is not None else [],
+        "routeGeometry": req.routeGeometry if req.routeGeometry is not None else [],
+        "startLocation": req.startLocation,
+        "finishLocation": req.finishLocation,
+        "orderedCheckpointIds": req.orderedCheckpointIds or [],
+        "distanceKm": req.distanceKm if req.distanceKm is not None else (distance_val if isinstance(distance_val, float) else 0.0),
+        "estimatedDurationMinutes": req.estimatedDurationMinutes,
+        "routeProfile": req.routeProfile or "cycling",
+        "paymentRequired": bool(req.paymentRequired),
+        "payment_required": bool(req.paymentRequired),
         "createdAt": now_str,
         "updatedAt": now_str,
     }
@@ -106,6 +125,15 @@ async def create_event(
         riderCount=0,
         checkpointCount=0,
         volunteerCount=0,
+        routePoints=event_doc["routePoints"],
+        routeGeometry=event_doc.get("routeGeometry"),
+        startLocation=event_doc.get("startLocation"),
+        finishLocation=event_doc.get("finishLocation"),
+        orderedCheckpointIds=event_doc.get("orderedCheckpointIds", []),
+        distanceKm=event_doc.get("distanceKm"),
+        estimatedDurationMinutes=event_doc.get("estimatedDurationMinutes"),
+        routeProfile=event_doc.get("routeProfile"),
+        paymentRequired=bool(event_doc.get("paymentRequired", False)),
         createdAt=now_str,
         updatedAt=now_str,
     )
@@ -166,6 +194,15 @@ async def get_event(
         riderCount=rider_cnt,
         checkpointCount=cp_cnt,
         volunteerCount=vol_cnt,
+        routePoints=ev.get("routePoints"),
+        routeGeometry=ev.get("routeGeometry"),
+        startLocation=ev.get("startLocation"),
+        finishLocation=ev.get("finishLocation"),
+        orderedCheckpointIds=ev.get("orderedCheckpointIds", []),
+        distanceKm=ev.get("distanceKm"),
+        estimatedDurationMinutes=ev.get("estimatedDurationMinutes"),
+        routeProfile=ev.get("routeProfile"),
+        paymentRequired=bool(ev.get("paymentRequired") or ev.get("payment_required", False)),
         createdAt=ev.get("createdAt", ""),
         updatedAt=ev.get("updatedAt", ""),
     )
@@ -211,6 +248,25 @@ async def update_event(
         update_data["organizerName"] = req.organizerName.strip()
     if req.status is not None:
         update_data["status"] = req.status.value if hasattr(req.status, "value") else str(req.status)
+    if req.routePoints is not None:
+        update_data["routePoints"] = req.routePoints
+    if req.routeGeometry is not None:
+        update_data["routeGeometry"] = req.routeGeometry
+    if req.startLocation is not None:
+        update_data["startLocation"] = req.startLocation
+    if req.finishLocation is not None:
+        update_data["finishLocation"] = req.finishLocation
+    if req.orderedCheckpointIds is not None:
+        update_data["orderedCheckpointIds"] = req.orderedCheckpointIds
+    if req.distanceKm is not None:
+        update_data["distanceKm"] = req.distanceKm
+    if req.estimatedDurationMinutes is not None:
+        update_data["estimatedDurationMinutes"] = req.estimatedDurationMinutes
+    if req.routeProfile is not None:
+        update_data["routeProfile"] = req.routeProfile
+    if req.paymentRequired is not None:
+        update_data["paymentRequired"] = bool(req.paymentRequired)
+        update_data["payment_required"] = bool(req.paymentRequired)
         
     update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
@@ -235,6 +291,15 @@ async def update_event(
         riderCount=rider_cnt,
         checkpointCount=cp_cnt,
         volunteerCount=vol_cnt,
+        routePoints=updated_ev.get("routePoints"),
+        routeGeometry=updated_ev.get("routeGeometry"),
+        startLocation=updated_ev.get("startLocation"),
+        finishLocation=updated_ev.get("finishLocation"),
+        orderedCheckpointIds=updated_ev.get("orderedCheckpointIds", []),
+        distanceKm=updated_ev.get("distanceKm"),
+        estimatedDurationMinutes=updated_ev.get("estimatedDurationMinutes"),
+        routeProfile=updated_ev.get("routeProfile"),
+        paymentRequired=bool(updated_ev.get("paymentRequired") or updated_ev.get("payment_required", False)),
         createdAt=updated_ev.get("createdAt", ""),
         updatedAt=updated_ev.get("updatedAt", ""),
     )

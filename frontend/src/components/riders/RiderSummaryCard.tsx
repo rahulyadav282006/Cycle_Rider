@@ -68,6 +68,26 @@ export const RiderSummaryCard: React.FC<RiderSummaryCardProps> = ({ profile }) =
                 {profile.name}
               </Typography>
               <RiderStatusBadge status={profile.status} size="sm" />
+              <Box
+                id="badge-rider-payment-status"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  backgroundColor: profile.paymentStatus === 'verified' ? '#ECFDF5' : '#FFFBEB',
+                  color: profile.paymentStatus === 'verified' ? '#065F46' : '#92400E',
+                  border: `1px solid ${profile.paymentStatus === 'verified' ? '#A7F3D0' : '#FDE68A'}`,
+                }}
+              >
+                Payment: {profile.paymentStatus === 'verified' ? 'Paid / Verified' : 'Pending'}
+              </Box>
             </Box>
 
             {/* Monospace Rider ID Badge */}

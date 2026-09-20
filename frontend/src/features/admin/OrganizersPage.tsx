@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import { colors } from '../../theme/colors';
+import { Box } from '@mui/material';
+import { PageHeroBanner } from '../../components/common/PageHeroBanner';
 import { AdminDashboardStats } from './AdminDashboardStats';
 import { OrganizerFilters } from './OrganizerFilters';
 import { OrganizerTable } from './OrganizerTable';
@@ -114,45 +113,11 @@ export const OrganizersPage: React.FC<OrganizersPageProps> = ({
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 1400, mx: 'auto' }}>
-      {/* Header */}
-      <Box sx={{ mb: 3.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5 }}>
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '1.75rem' },
-              fontWeight: 800,
-              color: colors.text.primary,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Organizers
-          </Typography>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.5,
-              px: 1,
-              py: 0.25,
-              borderRadius: '9999px',
-              backgroundColor: colors.brand.accentLight,
-              color: colors.brand.accentHover,
-              border: `1px solid #BAE6FD`,
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            <ShieldOutlinedIcon sx={{ fontSize: 13 }} />
-            Super Admin
-          </Box>
-        </Box>
-        <Typography sx={{ fontSize: '0.875rem', color: colors.text.secondary }}>
-          Manage RideTrack organizer accounts and access.
-        </Typography>
-      </Box>
+      {/* Panoramic Scenic Hero Banner */}
+      <PageHeroBanner
+        title="Organizer Management"
+        subtitle="Manage organizers and their permissions."
+      />
 
       {/* Summary Cards */}
       <AdminDashboardStats stats={dynamicStats} />

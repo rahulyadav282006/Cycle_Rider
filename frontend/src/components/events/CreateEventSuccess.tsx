@@ -80,7 +80,7 @@ export const CreateEventSuccess: React.FC<CreateEventSuccessProps> = ({
         }}
       >
         <Box component="span" sx={{ fontWeight: 700, color: colors.text.primary }}>
-          {eventData.eventName || 'Kolhapur Endurance Ride'}
+          {eventData.eventName || 'Event'}
         </Box>{' '}
         has been created successfully and is ready for stage & checkpoint setup.
       </Typography>
@@ -106,7 +106,7 @@ export const CreateEventSuccess: React.FC<CreateEventSuccessProps> = ({
           }}
         >
           <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: colors.text.primary }}>
-            {eventData.eventName || 'Kolhapur Endurance Ride'}
+            {eventData.eventName || 'Event'}
           </Typography>
           <RideBadge status={eventData.eventStatus} size="sm" />
         </Box>
@@ -122,17 +122,17 @@ export const CreateEventSuccess: React.FC<CreateEventSuccessProps> = ({
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
-            <span>{eventData.rideDate || '13 September 2026'}</span>
+            <span>{eventData.rideDate || '—'}</span>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <PlaceOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
-            <span>{eventData.location || 'Kolhapur'}</span>
+            <span>{eventData.location || '—'}</span>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <StraightenOutlinedIcon sx={{ fontSize: 16, color: colors.text.muted }} />
-            <span>{eventData.rideDistance || '200'} km course</span>
+            <span>{eventData.rideDistance ? `${eventData.rideDistance} km course` : '—'}</span>
           </Box>
         </Box>
       </Box>

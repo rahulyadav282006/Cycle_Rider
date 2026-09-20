@@ -5,7 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import FilterAltOffOutlinedIcon from '@mui/icons-material/FilterAltOffOutlined';
 import { colors } from '../../theme/colors';
-import { VolunteerStatus, EVENT_OPTIONS, CHECKPOINT_OPTIONS } from './mockVolunteersData';
+import { VolunteerStatus } from './mockVolunteersData';
 import { RideButton } from '../ui/RideButton';
 
 export type VolunteerStatusFilter = 'All' | VolunteerStatus;
@@ -22,6 +22,8 @@ export interface VolunteersToolbarProps {
   statusCounts: Record<VolunteerStatusFilter, number>;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
+  eventOptions?: string[];
+  checkpointOptions?: string[];
 }
 
 export const VolunteersToolbar: React.FC<VolunteersToolbarProps> = ({
@@ -36,11 +38,13 @@ export const VolunteersToolbar: React.FC<VolunteersToolbarProps> = ({
   statusCounts,
   onClearFilters,
   hasActiveFilters,
+  eventOptions,
+  checkpointOptions,
 }) => {
   const statusOptions: VolunteerStatusFilter[] = ['All', 'Assigned', 'Unassigned'];
 
-  const allEventsList = ['All Events', ...EVENT_OPTIONS];
-  const allCheckpointsList = ['All Checkpoints', ...CHECKPOINT_OPTIONS, 'Unassigned'];
+  const allEventsList = ['All Events', ...(eventOptions || [])];
+  const allCheckpointsList = ['All Checkpoints', ...(checkpointOptions || []), 'Unassigned'];
 
   return (
     <Box

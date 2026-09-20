@@ -19,6 +19,8 @@ class Settings(BaseModel):
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://10.228.56.157:5173",
+        "https://10.228.56.157:5174"
     ]
 
 settings = Settings()

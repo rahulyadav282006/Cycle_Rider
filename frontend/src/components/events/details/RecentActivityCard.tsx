@@ -6,7 +6,13 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import QrCodeScannerOutlinedIcon from '@mui/icons-material/QrCodeScannerOutlined';
 import { colors } from '../../../theme/colors';
-import { RecentActivityItem } from './mockEventDetailsData';
+
+export interface RecentActivityItem {
+  id: string;
+  type: 'rider_registered' | 'checkpoint_configured' | 'volunteer_assigned' | 'rider_scanned';
+  title: string;
+  timestamp: string;
+}
 
 export interface RecentActivityCardProps {
   activities: RecentActivityItem[];

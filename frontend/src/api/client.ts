@@ -1,4 +1,12 @@
-const API_BASE_URL = ((import.meta as any).env && (import.meta as any).env.VITE_API_URL) || 'http://127.0.0.1:8000';
+const getApiBaseUrl = (): string => {
+  if ((import.meta as any).env && (import.meta as any).env.VITE_API_URL) {
+    return (import.meta as any).env.VITE_API_URL;
+  }
+  const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : '127.0.0.1';
+  return `http://${host}:8000`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface APIError {
   code: string;
@@ -41,6 +49,10 @@ export function clearAuthSession() {
   localStorage.removeItem('ridetrack_user');
 }
 
+export function isAuthenticated(): boolean {
+  return Boolean(getAuthToken() && getStoredUser());
+}
+
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
@@ -71,9 +83,11 @@ export async function apiRequest<T = any>(
   }
 
   if (response.status === 401) {
-    // If unauthorized, clear auth and notify listeners
-    clearAuthSession();
-    window.dispatchEvent(new CustomEvent('ridetrack_auth_unauthorized'));
+    // If unauthorized, clear auth and notify listeners (ignore 401s from invalid credentials on login)
+    if (!endpoint.includes('/auth/login')) {
+      clearAuthSession();
+      window.dispatchEvent(new CustomEvent('ridetrack_auth_unauthorized'));
+    }
   }
 
   // If response is a blob/file download
@@ -119,6 +133,13 @@ export const api = {
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PUT',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+
+  patch: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
 

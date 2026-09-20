@@ -7,8 +7,12 @@ export interface PendingScan {
   eventId: string;
   checkpointId: string;
   scanTime: string;
+  scannedAt?: string;
+  status?: string;
   riderName?: string;
   jerseyNumber?: string;
+  deviceLatitude?: number;
+  deviceLongitude?: number;
 }
 
 const DB_NAME = 'RideTrackOfflineDB';

@@ -10,7 +10,7 @@ import {
   CreateEventFormData,
   CreateEventFormErrors,
 } from '../components/events/CreateEventForm';
-import { eventService } from '../api/services';
+import { eventService, checkpointService, RoutePoint, CheckpointItem } from '../api/services';
 import { EventStatus } from '../components/events/mockEventsData';
 
 export interface EditEventPageProps {
@@ -28,6 +28,7 @@ const EMPTY_FORM_DATA: CreateEventFormData = {
   startTime: '',
   organizerName: 'Organizer Admin',
   eventStatus: 'draft',
+  paymentRequired: false,
 };
 
 export const EditEventPage: React.FC<EditEventPageProps> = ({
@@ -36,6 +37,13 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
   onNavigateCheckpoints,
 }) => {
   const [formData, setFormData] = useState<CreateEventFormData>(EMPTY_FORM_DATA);
+  const [startLocation, setStartLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [finishLocation, setFinishLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const [checkpoints, setCheckpoints] = useState<Partial<CheckpointItem>[]>([]);
+  const [calculatedDistanceKm, setCalculatedDistanceKm] = useState<number>(0);
+  const [calculatedDurationMins, setCalculatedDurationMins] = useState<number>(0);
   const [formErrors, setFormErrors] = useState<CreateEventFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
@@ -45,10 +53,12 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
     let isMounted = true;
     if (eventId) {
       setLoading(true);
-      eventService
-        .getEvent(eventId)
-        .then((ev) => {
-          if (!isMounted) return;
+      Promise.all([
+        eventService.getEvent(eventId).catch(() => null),
+        checkpointService.listCheckpoints(eventId).catch(() => []),
+      ])
+        .then(([ev, cps]) => {
+          if (!isMounted || !ev) return;
           setFormData({
             eventName: ev.eventName || '',
             description: ev.description || '',
@@ -63,7 +73,23 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
                 : ev.status === 'completed'
                 ? 'completed'
                 : 'draft',
+            paymentRequired: Boolean(ev.paymentRequired),
           });
+          if (ev.startLocation) {
+            setStartLocation(ev.startLocation);
+          }
+          if (ev.finishLocation) {
+            setFinishLocation(ev.finishLocation);
+          }
+          if (ev.routePoints && Array.isArray(ev.routePoints)) {
+            setRoutePoints(ev.routePoints);
+          }
+          if (ev.routeGeometry && Array.isArray(ev.routeGeometry)) {
+            setRouteGeometry(ev.routeGeometry);
+          }
+          if (Array.isArray(cps)) {
+            setCheckpoints(cps);
+          }
         })
         .catch((err) => {
           console.error('Failed to load event details:', err);
@@ -79,7 +105,7 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
     };
   }, [eventId]);
 
-  const handleFieldChange = (field: keyof CreateEventFormData, value: string) => {
+  const handleFieldChange = (field: keyof CreateEventFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (formErrors[field as keyof CreateEventFormErrors]) {
       setFormErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -91,7 +117,8 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
     const newErrors: CreateEventFormErrors = {};
 
     if (!formData.eventName.trim()) newErrors.eventName = 'Event name is required.';
-    if (!formData.location.trim()) newErrors.location = 'Location is required.';
+    const finalLocation = formData.location.trim() || (startLocation?.name ? `${startLocation.name} to ${finishLocation?.name || ''}` : '');
+    if (!finalLocation) newErrors.location = 'Location is required.';
     if (!formData.rideDistance.trim() || Number(formData.rideDistance) <= 0) {
       newErrors.rideDistance = 'Enter a valid ride distance.';
     }
@@ -118,13 +145,73 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
         await eventService.updateEvent(eventId, {
           eventName: formData.eventName.trim(),
           description: formData.description.trim(),
-          location: formData.location.trim(),
-          rideDistance: Number(formData.rideDistance) || 0,
+          location: finalLocation,
+          rideDistance: calculatedDistanceKm > 0 ? calculatedDistanceKm : (Number(formData.rideDistance) || 0),
           rideDate: formData.rideDate.trim(),
           startTime: formData.startTime.trim() || '06:00 AM',
           organizerName: formData.organizerName || 'Organizer Admin',
           status: mappedStatus,
+          paymentRequired: Boolean(formData.paymentRequired),
+          startLocation: startLocation || undefined,
+          finishLocation: finishLocation || undefined,
+          routePoints: routePoints,
+          routeGeometry: routeGeometry,
+          distanceKm: calculatedDistanceKm > 0 ? calculatedDistanceKm : undefined,
+          estimatedDurationMinutes: calculatedDurationMins > 0 ? calculatedDurationMins : undefined,
         });
+
+        // Persist any updated or new checkpoints in exact reordered sequence
+        const savedCpIds: string[] = [];
+        for (let idx = 0; idx < checkpoints.length; idx++) {
+          const cp = checkpoints[idx];
+          const seq = idx + 1;
+          if (typeof cp.latitude !== 'number' || typeof cp.longitude !== 'number' || isNaN(cp.latitude) || isNaN(cp.longitude)) {
+            console.warn(`Skipping checkpoint "${cp.name}" because location coordinates are missing.`);
+            continue;
+          }
+          if (cp.id && !cp.id.startsWith('cp-item-') && !cp.id.startsWith('cp-map-')) {
+            // Existing checkpoint update
+            await checkpointService
+              .updateCheckpoint(cp.id, {
+                name: cp.name,
+                type: cp.type || 'Standard',
+                sequenceNumber: seq,
+                mandatory: cp.mandatory,
+                latitude: cp.latitude,
+                longitude: cp.longitude,
+                description: cp.description,
+              })
+              .catch((err) => console.warn('Could not update checkpoint:', err));
+            savedCpIds.push(cp.id);
+          } else {
+            // New checkpoint create
+            const createdCp = await checkpointService
+              .createCheckpoint(eventId, {
+                name: cp.name || `Checkpoint ${seq}`,
+                type: cp.type || 'Standard',
+                sequenceNumber: seq,
+                mandatory: cp.mandatory !== false,
+                latitude: cp.latitude,
+                longitude: cp.longitude,
+                description: cp.description,
+              })
+              .catch((err) => {
+                console.warn('Could not create checkpoint:', err);
+                return null;
+              });
+            if (createdCp && createdCp.id) {
+              savedCpIds.push(createdCp.id);
+            }
+          }
+        }
+
+        if (savedCpIds.length > 0) {
+          await eventService
+            .updateEvent(eventId, {
+              orderedCheckpointIds: savedCpIds,
+            })
+            .catch(() => {});
+        }
       }
       setIsSuccess(true);
     } catch (err: any) {
@@ -162,31 +249,33 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              p: 0,
               fontSize: '0.875rem',
-              fontWeight: 600,
+              fontWeight: 500,
+              p: 0,
               '&:hover': { color: colors.text.primary },
             }}
           >
             <ArrowBackIcon sx={{ fontSize: 18 }} />
-            Back to Event Overview
+            Back to Event
           </Box>
         </Box>
 
-        {/* Header Title */}
+        {/* Page Title & Context Header */}
         <Box sx={{ mb: 3 }}>
           <Typography
             variant="h4"
             sx={{
+              fontSize: { xs: '1.375rem', sm: '1.625rem' },
               fontWeight: 800,
               color: colors.text.primary,
-              fontSize: { xs: '1.5rem', sm: '1.75rem' },
+              letterSpacing: '-0.02em',
+              mb: 0.5,
             }}
           >
             Edit Event
           </Typography>
-          <Typography sx={{ color: colors.text.secondary, mt: 0.5, fontSize: '0.9375rem' }}>
-            Update event details, route distance, and schedule.
+          <Typography sx={{ color: colors.text.secondary, fontSize: '0.875rem' }}>
+            Modify event schedule, route distance, waypoint paths, and details.
           </Typography>
         </Box>
 
@@ -195,11 +284,10 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
           <Box
             sx={{
               backgroundColor: colors.surface.card,
-              border: `1px solid ${colors.surface.borderStrong}`,
+              border: `1px solid ${colors.surface.border}`,
               borderRadius: '8px',
-              p: { xs: 3, sm: 5 },
+              p: 4,
               textAlign: 'center',
-              boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.04)',
             }}
           >
             <Box
@@ -242,6 +330,25 @@ export const EditEventPage: React.FC<EditEventPageProps> = ({
           <CreateEventForm
             formData={formData}
             formErrors={formErrors}
+            startLocation={startLocation}
+            finishLocation={finishLocation}
+            onStartLocationChange={setStartLocation}
+            onFinishLocationChange={setFinishLocation}
+            routePoints={routePoints}
+            routeGeometry={routeGeometry}
+            checkpoints={checkpoints}
+            onRoutePointsChange={setRoutePoints}
+            onRouteGeometryChange={(geometry, dist, dur) => {
+              setRouteGeometry(geometry);
+              if (dist > 0) {
+                setCalculatedDistanceKm(dist);
+                setFormData((prev) => ({ ...prev, rideDistance: String(dist) }));
+              }
+              if (dur > 0) {
+                setCalculatedDurationMins(dur);
+              }
+            }}
+            onCheckpointsChange={setCheckpoints}
             isSubmitting={isSubmitting}
             submitLabel="Save Changes"
             submittingLabel="Saving Changes..."

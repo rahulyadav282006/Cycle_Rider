@@ -17,6 +17,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import * as XLSX from 'xlsx';
 import { colors } from '../../theme/colors';
 import { RideButton } from '../../components/ui/RideButton';
 import { reportService } from '../../api/services';
@@ -42,13 +44,29 @@ export const ReportExportDialog: React.FC<ReportExportDialogProps> = ({
 }) => {
   const [format, setFormat] = useState<'CSV' | 'Excel'>('CSV');
   const [dialogState, setDialogState] = useState<ExportDialogState>(initialState);
+  const [shareSuccess, setShareSuccess] = useState<boolean>(false);
 
   // Reset dialog on open/close
   React.useEffect(() => {
     if (open) {
       setDialogState(initialState);
+      setShareSuccess(false);
     }
   }, [open, initialState]);
+
+  const getTypeKey = () => {
+    return reportName.toLowerCase().includes('rider')
+      ? 'rider_list'
+      : reportName.toLowerCase().includes('checkpoint')
+      ? 'checkpoint_summary'
+      : reportName.toLowerCase().includes('finish')
+      ? 'finishers'
+      : reportName.toLowerCase().includes('dnf')
+      ? 'dnf'
+      : reportName.toLowerCase().includes('safe')
+      ? 'home_safe'
+      : 'event_summary';
+  };
 
   const handleStartExport = async () => {
     if (!eventId) {
@@ -58,30 +76,58 @@ export const ReportExportDialog: React.FC<ReportExportDialogProps> = ({
 
     setDialogState('exporting');
     try {
-      const typeKey = reportName.toLowerCase().includes('rider')
-        ? 'rider_list'
-        : reportName.toLowerCase().includes('checkpoint')
-        ? 'checkpoint_summary'
-        : reportName.toLowerCase().includes('finish')
-        ? 'finishers'
-        : reportName.toLowerCase().includes('dnf')
-        ? 'dnf'
-        : reportName.toLowerCase().includes('safe')
-        ? 'home_safe'
-        : 'event_summary';
+      const typeKey = getTypeKey();
 
-      const blob = await reportService.downloadCsv(eventId, typeKey);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${typeKey}_report.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      setDialogState('success');
+      if (format === 'Excel') {
+        const reportData = await reportService.getReport(eventId, typeKey);
+        const items = reportData?.items || [];
+        const ws = items.length > 0
+          ? XLSX.utils.json_to_sheet(items)
+          : XLSX.utils.json_to_sheet([reportData || { message: 'No data' }]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Report');
+        XLSX.writeFile(wb, `${typeKey}_report_${eventId}.xlsx`);
+        setDialogState('success');
+      } else {
+        const blob = await reportService.downloadCsv(eventId, typeKey);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${typeKey}_report_${eventId}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setDialogState('success');
+      }
     } catch {
       setDialogState('error');
+    }
+  };
+
+  const handleShare = async () => {
+    if (!navigator.share) {
+      // Fallback copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
+    try {
+      await navigator.share({
+        title: `${reportName} — ${eventName}`,
+        text: `Official report for ${eventName}: ${reportName}`,
+        url: window.location.href,
+      });
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 3000);
+    } catch {
+      // ignore user cancel
     }
   };
 
@@ -156,6 +202,15 @@ export const ReportExportDialog: React.FC<ReportExportDialogProps> = ({
 
       {/* Dialog Body */}
       <DialogContent sx={{ p: 2.5 }}>
+        {shareSuccess && (
+          <Alert
+            severity="info"
+            sx={{ mb: 2, borderRadius: '6px', fontWeight: 600, fontSize: '0.8125rem' }}
+          >
+            Report link copied / shared!
+          </Alert>
+        )}
+
         {/* Success Alert Banner */}
         {dialogState === 'success' && (
           <Alert
@@ -267,6 +322,15 @@ export const ReportExportDialog: React.FC<ReportExportDialogProps> = ({
           gap: 1.25,
         }}
       >
+        <RideButton
+          variant="secondary"
+          onClick={handleShare}
+          disabled={dialogState === 'exporting'}
+          startIcon={<ShareOutlinedIcon sx={{ fontSize: 16 }} />}
+        >
+          Share
+        </RideButton>
+
         <RideButton variant="secondary" onClick={onClose} disabled={dialogState === 'exporting'}>
           {dialogState === 'success' ? 'Close' : 'Cancel'}
         </RideButton>

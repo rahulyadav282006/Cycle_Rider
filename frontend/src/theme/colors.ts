@@ -2,44 +2,46 @@
 // Operational, outdoor-friendly, enterprise endurance event management
 
 export const colors = {
-  // Brand foundation - Curated with #2A14B4 and #4338CA
+  // Brand foundation - Natural Outdoor Cycling (Forest Green, Sage, Deep Teal)
   brand: {
-    primary: '#4338CA',      // Rich Indigo (#4338CA)
-    primaryDark: '#2A14B4',  // Deep Electric Indigo (#2A14B4)
-    primaryLight: '#312E81', // Indigo 900
-    accent: '#4338CA',       // #4338CA
-    accentHover: '#2A14B4',  // #2A14B4
-    accentLight: '#EEF2FF',  // Indigo 50
-    highlight: '#10B981',    // Emerald 500 - Course active / green flag
+    primary: '#135F63',      // Rich forest teal / dark green
+    primaryDark: '#0E484B',  // Deep forest
+    primaryLight: '#1A7A7F', // Mid teal
+    accent: '#2D6A4F',       // Natural forest green accent
+    accentHover: '#1B4332',  // Deep pine green
+    accentLight: '#E8F3EC',  // Soft sage tint
+    highlight: '#10B981',    // Emerald green for active course
   },
 
   // Primary color alias
   primary: {
-    main: '#4338CA',
-    dark: '#2A14B4',
-    light: '#EEF2FF',
+    main: '#135F63',
+    dark: '#0E484B',
+    light: '#E8F3EC',
   },
 
-  // Surfaces & Backgrounds
+  // Surfaces & Backgrounds - Calm, Natural, Light Sage & Warm White
   surface: {
-    page: '#F8FAFC',        // Slate 50 - Crisp, clear, outdoor readable
-    card: '#FFFFFF',        // Pure white card background
+    page: '#F6FAF7',         // Calm, natural warm-white with subtle pale sage tint
+    card: '#FFFFFF',         // Pure white card surfaces
     elevated: '#FFFFFF',
-    subtle: '#F1F5F9',      // Slate 100
-    sidebar: '#1E1B4B',     // Deep Indigo 950 for high-contrast enterprise stability
-    sidebarActive: '#2A14B4',// #2A14B4 for active sidebar items
-    header: '#FFFFFF',
-    border: '#E0E7FF',      // Indigo-tinted border
-    borderStrong: '#C7D2FE',
+    subtle: '#EDF4F0',       // Light sage subtle background
+    sidebar: '#EBF2ED',      // Light greenish / sage sidebar from design reference
+    sidebarBorder: '#D8E5DC',// Subtle sage border for sidebar
+    sidebarActive: '#D5E7DB',// Soft sage active navigation pill
+    sidebarActiveText: '#135F63', // Dark forest teal active text
+    header: '#FFFFFF',       // Clean white top header
+    border: '#E0EAE2',       // Subtle natural sage border
+    borderStrong: '#C8DACD', // Medium sage border
   },
 
-  // Text Hierarchy - Incorporating #464555 for secondary text
+  // Text Hierarchy - Natural Dark Slate / Forest
   text: {
-    primary: '#0F172A',     // Slate 900 - Max contrast
-    secondary: '#464555',   // #464555 - Neutral secondary text
-    muted: '#64748B',       // Slate 500
-    inverse: '#FFFFFF',     // White on dark backgrounds
-    inverseMuted: '#C7D2FE',// Indigo 200 on dark
+    primary: '#0F1F17',      // Deep slate-forest text for maximum readability
+    secondary: '#3D5245',    // Subtle dark green-slate secondary
+    muted: '#6E8276',        // Muted sage-slate for metadata
+    inverse: '#FFFFFF',      // White on dark backgrounds
+    inverseMuted: '#D5E7DB', // Pale sage on dark
   },
 
   // Interactive / State Colors

@@ -11,12 +11,14 @@ import { LiveRiderItem } from './mockLiveTrackingData';
 export interface RiderDetailsDrawerProps {
   open: boolean;
   rider: LiveRiderItem | null;
+  eventName?: string;
   onClose: () => void;
 }
 
 export const RiderDetailsDrawer: React.FC<RiderDetailsDrawerProps> = ({
   open,
   rider,
+  eventName,
   onClose,
 }) => {
   if (!rider) return null;
@@ -162,7 +164,7 @@ export const RiderDetailsDrawer: React.FC<RiderDetailsDrawerProps> = ({
                 Event
               </Typography>
               <Typography sx={{ fontWeight: 600, color: colors.text.primary }}>
-                Kolhapur Endurance Ride
+                {eventName || 'Active Event'}
               </Typography>
             </Box>
             <Box>

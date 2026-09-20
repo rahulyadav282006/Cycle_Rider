@@ -23,6 +23,13 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface RoutePoint {
+  lat: number;
+  lng: number;
+  name?: string;
+  elevation?: number;
+}
+
 export interface EventItem {
   id: string;
   eventName: string;
@@ -37,6 +44,15 @@ export interface EventItem {
   riderCount: number;
   checkpointCount: number;
   volunteerCount: number;
+  routePoints?: RoutePoint[];
+  routeGeometry?: [number, number][];
+  startLocation?: { name: string; lat: number; lng: number };
+  finishLocation?: { name: string; lat: number; lng: number };
+  orderedCheckpointIds?: string[];
+  distanceKm?: number;
+  estimatedDurationMinutes?: number;
+  routeProfile?: string;
+  paymentRequired?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +64,9 @@ export interface CheckpointItem {
   type: string;
   sequenceNumber: number;
   mandatory: boolean;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +87,8 @@ export interface RiderItem {
   medicalNotes: string;
   qrCodeValue: string;
   status: string;
+  paymentStatus?: 'pending' | 'verified' | string;
+  paymentRequired?: boolean;
   createdAt: string;
   updatedAt: string;
   timeline?: any[];
@@ -86,6 +107,17 @@ export interface VolunteerItem {
   updatedAt: string;
 }
 
+export interface ScanValidateResult {
+  riderId: string;
+  riderName: string;
+  jerseyNumber: string;
+  eventId: string;
+  eventName: string;
+  checkpointId: string;
+  checkpointName: string;
+  scanTime: string;
+}
+
 export interface ScanResult {
   id: string;
   clientScanId: string;
@@ -99,6 +131,10 @@ export interface ScanResult {
   volunteerId: string;
   scanTime: string;
   status: string;
+  checkpointLatitude?: number;
+  checkpointLongitude?: number;
+  deviceLatitude?: number;
+  deviceLongitude?: number;
 }
 
 export interface LiveTrackingData {
@@ -241,6 +277,14 @@ export const eventService = {
     startTime: string;
     organizerName?: string;
     status?: string;
+    routePoints?: RoutePoint[];
+    routeGeometry?: [number, number][];
+    startLocation?: { name: string; lat: number; lng: number };
+    finishLocation?: { name: string; lat: number; lng: number };
+    distanceKm?: number;
+    estimatedDurationMinutes?: number;
+    routeProfile?: string;
+    paymentRequired?: boolean;
   }): Promise<EventItem> => {
     return api.post<EventItem>('/api/v1/events', payload);
   },
@@ -261,7 +305,7 @@ export const checkpointService = {
 
   createCheckpoint: async (
     eventId: string,
-    payload: { name: string; type?: string; sequenceNumber: number; mandatory?: boolean }
+    payload: { name: string; type?: string; sequenceNumber: number; mandatory?: boolean; latitude?: number; longitude?: number; description?: string }
   ): Promise<CheckpointItem> => {
     return api.post<CheckpointItem>(`/api/v1/events/${eventId}/checkpoints`, payload);
   },
@@ -312,6 +356,10 @@ export const riderService = {
   deleteRider: async (riderId: string): Promise<{ deleted: boolean }> => {
     return api.delete<{ deleted: boolean }>(`/api/v1/riders/${riderId}`);
   },
+
+  updatePaymentStatus: async (riderId: string, paymentStatus: 'pending' | 'verified' | string): Promise<RiderItem> => {
+    return api.patch<RiderItem>(`/api/v1/riders/${riderId}/payment`, { paymentStatus });
+  },
 };
 
 export const volunteerService = {
@@ -344,12 +392,22 @@ export const volunteerService = {
 };
 
 export const scanService = {
+  validateScan: async (payload: {
+    riderId: string;
+    eventId: string;
+    checkpointId: string;
+  }): Promise<ScanValidateResult> => {
+    return api.post<ScanValidateResult>('/api/v1/scans/validate', payload);
+  },
+
   recordScan: async (payload: {
     clientScanId: string;
     riderId: string;
     eventId: string;
     checkpointId: string;
     scanTime?: string;
+    deviceLatitude?: number;
+    deviceLongitude?: number;
   }): Promise<ScanResult> => {
     return api.post<ScanResult>('/api/v1/scans', payload);
   },
@@ -398,6 +456,10 @@ export const adminService = {
     return api.get('/api/v1/admin/events');
   },
 
+  getAuditLogs: async (limit: number = 20): Promise<any[]> => {
+    return api.get<any[]>(`/api/v1/admin/audit-logs?limit=${limit}`);
+  },
+
   getSettings: async (): Promise<SystemSettings> => {
     return api.get<SystemSettings>('/api/v1/admin/settings');
   },
@@ -407,83 +469,48 @@ export const adminService = {
   },
 };
 
-// --------------------------------------------------
-// DYNAMIC QR CODE SERVICE
-// --------------------------------------------------
-export interface QrCodeData {
-  id: string;
-  shortId: string;
-  destinationUrl: string;
-  trackingUrl: string;
-  svgUrl: string;
-  totalScans: number;
-  title?: string;
-  createdAt: string;
+export interface RouteCalculationResult {
+  coordinates: [number, number][]; // [lng, lat]
+  distanceKm: number;
+  estimatedDurationMinutes: number;
+  waypoints: { lat: number; lng: number; name?: string }[];
+  profile: string;
+  provider: string;
 }
 
-export interface QrScanLog {
-  timestamp: string;
-  userAgent: string;
-  clientIp: string;
+export interface GeocodeLocationResult {
+  displayName: string;
+  lat: number;
+  lng: number;
+  type?: string;
 }
 
-export interface QrAnalyticsData {
-  shortId: string;
-  destinationUrl: string;
-  trackingUrl: string;
-  totalScans: number;
-  scans: QrScanLog[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const qrCodeService = {
-  generateQrCode: async (payload: { destinationUrl: string; title?: string }): Promise<QrCodeData> => {
-    return api.post<QrCodeData>('/api/v1/qr/generate', payload);
+export const routeService = {
+  calculateRoute: async (
+    waypoints: Array<{ lat: number; lng: number } | [number, number]>,
+    profile: string = 'cycling'
+  ): Promise<RouteCalculationResult> => {
+    const coordsStr = waypoints
+      .map((w: any) => {
+        if (Array.isArray(w)) {
+          return `${w[0]},${w[1]}`;
+        }
+        if (w && typeof w === 'object' && w.lng !== undefined && w.lat !== undefined) {
+          return `${w.lng},${w.lat}`;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(';');
+    return api.get<RouteCalculationResult>(
+      `/api/v1/routes/directions?coordinates=${encodeURIComponent(coordsStr)}&profile=${encodeURIComponent(profile)}`
+    );
   },
 
-  getQrAnalytics: async (shortId: string): Promise<QrAnalyticsData> => {
-    return api.get<QrAnalyticsData>(`/api/v1/qr/${shortId}/analytics`);
-  },
-
-  getQrSvgUrl: (shortId: string): string => {
-    return `/api/v1/qr/${shortId}/svg`;
-  },
-
-  getDirectSvgUrl: (url: string): string => {
-    return `/api/v1/qr/direct/svg?url=${encodeURIComponent(url)}`;
-  },
-
-  downloadQrSvg: async (shortId: string, filename: string = 'new-rider-qr.svg'): Promise<void> => {
-    const response = await fetch(`/api/v1/qr/${shortId}/svg`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch QR SVG: ${response.statusText}`);
-    }
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(objectUrl);
-  },
-
-  downloadDirectSvg: async (content: string, filename: string = 'new-rider-qr.svg'): Promise<void> => {
-    const response = await fetch(`/api/v1/qr/direct/svg?url=${encodeURIComponent(content)}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch QR SVG: ${response.statusText}`);
-    }
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(objectUrl);
+  searchLocation: async (query: string): Promise<GeocodeLocationResult[]> => {
+    return api.get<GeocodeLocationResult[]>(
+      `/api/v1/routes/geocode?q=${encodeURIComponent(query)}`
+    );
   },
 };
 

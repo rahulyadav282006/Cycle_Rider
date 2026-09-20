@@ -24,12 +24,16 @@ export interface CheckpointFormData {
   type: CheckpointType | '';
   sequence: string | number;
   requirement: CheckpointRequirement;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface CheckpointFormErrors {
   name?: string;
   type?: string;
   sequence?: string;
+  latitude?: string;
+  longitude?: string;
   general?: string;
 }
 
@@ -384,6 +388,81 @@ export const CheckpointForm: React.FC<CheckpointFormProps> = ({
               Mandatory checkpoints are required for the rider&apos;s event timeline.
               Optional checkpoints may be skipped.
             </Typography>
+          </Box>
+        </Box>
+
+        {/* GPS Coordinates (Optional) */}
+        <Box>
+          <Box
+            sx={{
+              display: 'block',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              color: colors.text.primary,
+              mb: 0.75,
+            }}
+          >
+            GPS Coordinates (Optional Pin Location)
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <Box>
+              <Box
+                component="input"
+                id="checkpoint-latitude-input"
+                type="number"
+                step="any"
+                placeholder="Latitude (e.g. 28.6139)"
+                value={formData.latitude || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange('latitude', e.target.value)
+                }
+                sx={{
+                  width: '100%',
+                  height: 44,
+                  px: 1.5,
+                  fontSize: '0.875rem',
+                  color: colors.text.primary,
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${colors.surface.borderStrong}`,
+                  borderRadius: '6px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  '&:focus': {
+                    borderColor: colors.brand.accent,
+                    boxShadow: '0 0 0 2px rgba(2, 132, 199, 0.15)',
+                  },
+                }}
+              />
+            </Box>
+            <Box>
+              <Box
+                component="input"
+                id="checkpoint-longitude-input"
+                type="number"
+                step="any"
+                placeholder="Longitude (e.g. 77.2090)"
+                value={formData.longitude || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange('longitude', e.target.value)
+                }
+                sx={{
+                  width: '100%',
+                  height: 44,
+                  px: 1.5,
+                  fontSize: '0.875rem',
+                  color: colors.text.primary,
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${colors.surface.borderStrong}`,
+                  borderRadius: '6px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  '&:focus': {
+                    borderColor: colors.brand.accent,
+                    boxShadow: '0 0 0 2px rgba(2, 132, 199, 0.15)',
+                  },
+                }}
+              />
+            </Box>
           </Box>
         </Box>
 

@@ -38,6 +38,9 @@ async def list_checkpoints(
             type=cp.get("type", "Standard"),
             sequenceNumber=cp["sequenceNumber"],
             mandatory=cp.get("mandatory", True),
+            latitude=cp.get("latitude"),
+            longitude=cp.get("longitude"),
+            description=cp.get("description"),
             createdAt=cp.get("createdAt", ""),
             updatedAt=cp.get("updatedAt", ""),
         ).model_dump()
@@ -64,6 +67,12 @@ async def create_checkpoint(
             detail={"code": "FORBIDDEN", "message": "Cannot add checkpoint to another organizer's event"},
         )
         
+    if req.latitude is None or req.longitude is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "LOCATION_REQUIRED", "message": "Checkpoint location (latitude and longitude) is required"},
+        )
+
     now_str = datetime.now(timezone.utc).isoformat()
     cp_id = f"cp-{uuid.uuid4().hex[:8]}"
     
@@ -74,6 +83,9 @@ async def create_checkpoint(
         "type": req.type.strip() if req.type else "Standard",
         "sequenceNumber": req.sequenceNumber,
         "mandatory": req.mandatory,
+        "latitude": req.latitude,
+        "longitude": req.longitude,
+        "description": req.description.strip() if req.description else None,
         "createdAt": now_str,
         "updatedAt": now_str,
     }
@@ -87,6 +99,9 @@ async def create_checkpoint(
         type=cp_doc["type"],
         sequenceNumber=cp_doc["sequenceNumber"],
         mandatory=cp_doc["mandatory"],
+        latitude=cp_doc.get("latitude"),
+        longitude=cp_doc.get("longitude"),
+        description=cp_doc.get("description"),
         createdAt=now_str,
         updatedAt=now_str,
     )
@@ -122,6 +137,12 @@ async def update_checkpoint(
         update_data["sequenceNumber"] = req.sequenceNumber
     if req.mandatory is not None:
         update_data["mandatory"] = req.mandatory
+    if req.latitude is not None:
+        update_data["latitude"] = req.latitude
+    if req.longitude is not None:
+        update_data["longitude"] = req.longitude
+    if req.description is not None:
+        update_data["description"] = req.description.strip() if req.description else None
     update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
     await db.checkpoints.update_one({"id": checkpoint_id}, {"$set": update_data})
@@ -134,8 +155,39 @@ async def update_checkpoint(
         type=updated_cp["type"],
         sequenceNumber=updated_cp["sequenceNumber"],
         mandatory=updated_cp["mandatory"],
+        latitude=updated_cp.get("latitude"),
+        longitude=updated_cp.get("longitude"),
+        description=updated_cp.get("description"),
         createdAt=updated_cp.get("createdAt", ""),
         updatedAt=updated_cp.get("updatedAt", ""),
+    )
+    return APIResponse(success=True, data=res.model_dump())
+
+@router.get("/checkpoints/{checkpoint_id}", response_model=APIResponse)
+async def get_checkpoint(
+    checkpoint_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    cp = await db.checkpoints.find_one({"id": checkpoint_id})
+    if not cp:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "CHECKPOINT_NOT_FOUND", "message": "Checkpoint not found"},
+        )
+        
+    res = CheckpointResponse(
+        id=cp["id"],
+        eventId=cp["eventId"],
+        name=cp["name"],
+        type=cp["type"],
+        sequenceNumber=cp["sequenceNumber"],
+        mandatory=cp["mandatory"],
+        latitude=cp.get("latitude"),
+        longitude=cp.get("longitude"),
+        description=cp.get("description"),
+        createdAt=cp.get("createdAt", ""),
+        updatedAt=cp.get("updatedAt", ""),
     )
     return APIResponse(success=True, data=res.model_dump())
 

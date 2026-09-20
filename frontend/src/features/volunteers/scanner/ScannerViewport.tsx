@@ -20,6 +20,8 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
   isScanning = true,
 }) => {
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [availableCameras, setAvailableCameras] = useState<Array<{ id: string; label: string }>>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [torchOn, setTorchOn] = useState<boolean>(false);
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [cameraState, setCameraState] = useState<'starting' | 'active' | 'error' | 'stopped'>('starting');
@@ -29,7 +31,30 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
   const isThrottledRef = useRef<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const startScanner = async (facing: 'environment' | 'user') => {
+  // Enumerate cameras on mount
+  useEffect(() => {
+    Html5Qrcode.getCameras()
+      .then((devices) => {
+        if (devices && devices.length > 0) {
+          setAvailableCameras(devices);
+          // Prefer rear/environment camera if available (mobile)
+          const rearCam = devices.find((d) => /back|rear|environment/i.test(d.label));
+          if (rearCam) {
+            setSelectedCameraId(rearCam.id);
+            setFacingMode('environment');
+          } else {
+            // Default to first device (standard laptop webcam)
+            setSelectedCameraId(devices[0].id);
+            setFacingMode('user');
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Camera enumeration notice:', err);
+      });
+  }, []);
+
+  const startScanner = async (cameraIdOrFacing: string | { facingMode: 'environment' | 'user' }) => {
     try {
       setCameraState('starting');
       setCameraError(null);
@@ -48,28 +73,30 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
         fps: 15,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
+        useBarCodeDetectorIfSupported: false,
       };
 
-      await scanner.start(
-        { facingMode: facing },
-        qrConfig,
-        (decodedText) => {
-          // On QR scan detected:
-          if (isThrottledRef.current) return;
-          isThrottledRef.current = true;
+      const onScanSuccess = (decodedText: string) => {
+        if (isThrottledRef.current) return;
+        isThrottledRef.current = true;
+        onScan(decodedText);
+        setTimeout(() => {
+          isThrottledRef.current = false;
+        }, 2500);
+      };
 
-          // Process scan callback
-          onScan(decodedText);
+      const onScanFailure = () => {
+        // Frame without QR
+      };
 
-          // Throttling window to avoid duplicate triggers while camera is held on QR
-          setTimeout(() => {
-            isThrottledRef.current = false;
-          }, 2500);
-        },
-        () => {
-          // Frame without QR - ignore per-frame noise
-        }
-      );
+      try {
+        await scanner.start(cameraIdOrFacing, qrConfig, onScanSuccess, onScanFailure);
+      } catch (firstErr) {
+        // Fallback: If environment camera constraint fails (e.g. on laptop/desktop), retry with user camera
+        console.warn('Initial camera source failed, trying user camera fallback:', firstErr);
+        await scanner.start({ facingMode: 'user' }, qrConfig, onScanSuccess, onScanFailure);
+        setFacingMode('user');
+      }
 
       setCameraState('active');
 
@@ -92,8 +119,8 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
       const errStr = String(err?.message || err || '');
       if (errStr.includes('NotAllowedError') || errStr.includes('Permission')) {
         setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (errStr.includes('NotFoundError') || errStr.includes('DevicesNotFoundError')) {
-        setCameraError('No camera found on this device. You can test by uploading a QR image below.');
+      } else if (errStr.includes('NotFoundError') || errStr.includes('DevicesNotFoundError') || errStr.includes('OverconstrainedError')) {
+        setCameraError('No compatible camera found on this device. You can test by uploading a QR image below.');
       } else {
         setCameraError('Camera could not be started. Ensure no other application is using it.');
       }
@@ -102,26 +129,36 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
 
   useEffect(() => {
     if (isScanning) {
-      startScanner(facingMode);
+      const source = selectedCameraId ? selectedCameraId : { facingMode };
+      startScanner(source);
     } else {
       if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop().catch(() => {});
+        html5QrCodeRef.current.stop().catch(() => { });
       }
     }
 
     return () => {
       if (html5QrCodeRef.current) {
         if (html5QrCodeRef.current.isScanning) {
-          html5QrCodeRef.current.stop().catch(() => {});
+          html5QrCodeRef.current.stop().catch(() => { });
         }
         html5QrCodeRef.current.clear();
       }
     };
-  }, [facingMode, isScanning]);
+  }, [selectedCameraId, facingMode, isScanning]);
 
   const toggleCamera = () => {
-    const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
-    setFacingMode(nextFacing);
+    if (availableCameras.length > 1) {
+      const currentIndex = availableCameras.findIndex((c) => c.id === selectedCameraId);
+      const nextIndex = (currentIndex + 1) % availableCameras.length;
+      const nextCam = availableCameras[nextIndex];
+      setSelectedCameraId(nextCam.id);
+      setFacingMode(/back|rear|environment/i.test(nextCam.label) ? 'environment' : 'user');
+    } else {
+      const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
+      setFacingMode(nextFacing);
+      setSelectedCameraId('');
+    }
   };
 
   const toggleTorch = async () => {
@@ -149,8 +186,12 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
       if (decodedResult) {
         onScan(decodedResult);
       }
-    } catch (err) {
-      alert('Could not detect a valid QR code in the uploaded image.');
+    } catch {
+      alert('Could not detect a valid QR code in the uploaded image. Please try a clearer picture.');
+    } finally {
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
 
@@ -287,19 +328,6 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
                 }}
               >
                 Retry
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<UploadFileOutlinedIcon />}
-                onClick={() => fileInputRef.current?.click()}
-                sx={{
-                  backgroundColor: '#0284C7',
-                  fontSize: '0.75rem',
-                  textTransform: 'none',
-                }}
-              >
-                Upload QR Image
               </Button>
             </Box>
           </Box>
@@ -480,7 +508,7 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
           px: 1,
         }}
       >
-        {/* Camera Switcher */}
+        {/* Camera Switcher & Upload */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton
             size="small"
@@ -496,12 +524,29 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
           >
             <FlipCameraIosOutlinedIcon sx={{ fontSize: 18 }} />
           </IconButton>
-          <Box sx={{ textAlign: 'left' }}>
+
+          <IconButton
+            size="small"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Upload Image"
+            sx={{
+              border: `1px solid ${colors.surface.borderStrong}`,
+              borderRadius: '6px',
+              p: 0.75,
+              color: colors.text.primary,
+            }}
+            title="Upload QR Image"
+          >
+            <UploadFileOutlinedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+
+          <Box sx={{ textAlign: 'left', ml: 0.5 }}>
             <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: colors.text.muted, display: 'block' }}>
-              Camera
+              Camera / Upload
             </Typography>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: colors.text.primary }}>
-              {facingMode === 'environment' ? 'Back Camera' : 'Front Camera'}
+            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: colors.text.primary, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {availableCameras.find((c) => c.id === selectedCameraId)?.label ||
+                (facingMode === 'environment' ? 'Back Camera' : 'Front Camera / Webcam')}
             </Typography>
           </Box>
         </Box>
@@ -518,8 +563,8 @@ export const ScannerViewport: React.FC<ScannerViewportProps> = ({
                 cameraState === 'active'
                   ? '0 0 0 2px rgba(16, 185, 129, 0.25)'
                   : cameraState === 'error'
-                  ? '0 0 0 2px rgba(239, 68, 68, 0.25)'
-                  : '0 0 0 2px rgba(245, 158, 11, 0.25)',
+                    ? '0 0 0 2px rgba(239, 68, 68, 0.25)'
+                    : '0 0 0 2px rgba(245, 158, 11, 0.25)',
             }}
           />
           <Typography

@@ -87,7 +87,9 @@ export const CheckpointPage: React.FC<CheckpointPageProps> = ({
             sequence: cp.sequenceNumber || idx + 1,
             name: cp.name,
             type: (cp.type === 'Start' ? 'Start' : cp.type === 'Finish' ? 'Finish' : cp.type === 'Hydration' ? 'Refreshment' : 'Checkpoint') as any,
-            requirement: cp.isMandatory ? 'Mandatory' : 'Optional',
+            requirement: (cp.isMandatory || cp.mandatory) ? 'Mandatory' : 'Optional',
+            latitude: cp.latitude,
+            longitude: cp.longitude,
             volunteersAssigned: volData.filter((v: any) => (v.checkpointId || v.assignedCheckpointId) === cp.id).length,
           }));
           setCheckpoints(mapped);
@@ -116,11 +118,13 @@ export const CheckpointPage: React.FC<CheckpointPageProps> = ({
     }
   };
 
+  // Open Edit Dialog
   const handleEditCheckpoint = (cp: CheckpointItem) => {
     setSelectedCheckpoint(cp);
     setIsEditOpen(true);
   };
 
+  // Open Delete Confirmation Dialog
   const handleDeleteCheckpoint = (cp: CheckpointItem) => {
     setDeleteTarget(cp);
     setIsDeleteOpen(true);
@@ -135,6 +139,8 @@ export const CheckpointPage: React.FC<CheckpointPageProps> = ({
           sequenceNumber: Number(newCp.sequence) || (checkpoints.length + 1),
           type: newCp.type,
           mandatory: newCp.requirement === 'Mandatory',
+          latitude: newCp.latitude,
+          longitude: newCp.longitude,
         });
 
         const item: CheckpointItem = {
@@ -143,6 +149,8 @@ export const CheckpointPage: React.FC<CheckpointPageProps> = ({
           name: created.name,
           type: (created.type === 'Start' ? 'Start' : created.type === 'Finish' ? 'Finish' : created.type === 'Hydration' ? 'Refreshment' : 'Checkpoint') as any,
           requirement: created.mandatory ? 'Mandatory' : 'Optional',
+          latitude: created.latitude,
+          longitude: created.longitude,
           volunteersAssigned: 0,
         };
 
@@ -166,6 +174,8 @@ export const CheckpointPage: React.FC<CheckpointPageProps> = ({
           sequenceNumber: Number(updated.sequence) || 1,
           type: updated.type,
           mandatory: updated.requirement === 'Mandatory',
+          latitude: updated.latitude,
+          longitude: updated.longitude,
         });
 
         setCheckpoints((prev) =>

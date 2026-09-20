@@ -8,7 +8,7 @@ import {
 } from '../components/events/CreateEventForm';
 import { CreateEventSuccess } from '../components/events/CreateEventSuccess';
 import { RideEvent, EventStatus } from '../components/events/mockEventsData';
-import { eventService } from '../api/services';
+import { eventService, checkpointService, RoutePoint, CheckpointItem } from '../api/services';
 
 export interface CreateEventPageProps {
   onNavigateBack: () => void;
@@ -25,6 +25,7 @@ const DEFAULT_FORM_DATA: CreateEventFormData = {
   startTime: '',
   organizerName: 'Organizer Admin',
   eventStatus: 'draft',
+  paymentRequired: false,
 };
 
 export const CreateEventPage: React.FC<CreateEventPageProps> = ({
@@ -33,12 +34,19 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({
   onNavigateEventDetails,
 }) => {
   const [formData, setFormData] = useState<CreateEventFormData>(DEFAULT_FORM_DATA);
+  const [startLocation, setStartLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [finishLocation, setFinishLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const [onMapCheckpoints, setOnMapCheckpoints] = useState<Partial<CheckpointItem>[]>([]);
+  const [calculatedDistanceKm, setCalculatedDistanceKm] = useState<number>(0);
+  const [calculatedDurationMins, setCalculatedDurationMins] = useState<number>(0);
   const [formErrors, setFormErrors] = useState<CreateEventFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [createdEventId, setCreatedEventId] = useState<string | null>(null);
 
-  const handleFieldChange = (field: keyof CreateEventFormData, value: string) => {
+  const handleFieldChange = (field: keyof CreateEventFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (formErrors[field as keyof CreateEventFormErrors]) {
       setFormErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -51,7 +59,8 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({
     // Perform validation
     const errors: CreateEventFormErrors = {};
     if (!formData.eventName.trim()) errors.eventName = 'Event name is required.';
-    if (!formData.location.trim()) errors.location = 'Location is required.';
+    const finalLocation = formData.location.trim() || (startLocation?.name ? `${startLocation.name} to ${finishLocation?.name || ''}` : '');
+    if (!finalLocation) errors.location = 'Location is required.';
     if (!formData.rideDistance.trim() || Number(formData.rideDistance) <= 0) {
       errors.rideDistance = 'Enter a valid ride distance.';
     }
@@ -79,13 +88,57 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({
       const created = await eventService.createEvent({
         eventName: formData.eventName.trim(),
         description: formData.description.trim(),
-        location: formData.location.trim(),
-        rideDistance: Number(formData.rideDistance) || 0,
+        location: finalLocation,
+        rideDistance: calculatedDistanceKm > 0 ? calculatedDistanceKm : (Number(formData.rideDistance) || 0),
         rideDate: formData.rideDate.trim(),
         startTime: formData.startTime.trim() || '06:00 AM',
         organizerName: formData.organizerName || 'Organizer Admin',
         status: mappedStatus,
+        paymentRequired: Boolean(formData.paymentRequired),
+        startLocation: startLocation || undefined,
+        finishLocation: finishLocation || undefined,
+        routePoints: routePoints,
+        routeGeometry: routeGeometry,
+        distanceKm: calculatedDistanceKm > 0 ? calculatedDistanceKm : undefined,
+        estimatedDurationMinutes: calculatedDurationMins > 0 ? calculatedDurationMins : undefined,
       });
+
+      // Persist checkpoints created in the route timeline
+      const savedCpIds: string[] = [];
+      if (onMapCheckpoints.length > 0) {
+        for (let idx = 0; idx < onMapCheckpoints.length; idx++) {
+          const cp = onMapCheckpoints[idx];
+          if (typeof cp.latitude !== 'number' || typeof cp.longitude !== 'number' || isNaN(cp.latitude) || isNaN(cp.longitude)) {
+            console.warn(`Skipping checkpoint "${cp.name}" because location coordinates are missing.`);
+            continue;
+          }
+          const createdCp = await checkpointService
+            .createCheckpoint(created.id, {
+              name: cp.name || `Checkpoint ${idx + 1}`,
+              type: cp.type || 'Standard',
+              sequenceNumber: idx + 1,
+              mandatory: cp.mandatory !== false,
+              latitude: cp.latitude,
+              longitude: cp.longitude,
+              description: cp.description,
+            })
+            .catch((err) => {
+              console.warn('Could not save checkpoint:', err);
+              return null;
+            });
+          if (createdCp && createdCp.id) {
+            savedCpIds.push(createdCp.id);
+          }
+        }
+
+        if (savedCpIds.length > 0) {
+          await eventService
+            .updateEvent(created.id, {
+              orderedCheckpointIds: savedCpIds,
+            })
+            .catch(() => {});
+        }
+      }
 
       const newEvent: RideEvent = {
         id: created.id,
@@ -119,7 +172,7 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({
 
   return (
     <PageContainer>
-      {/* 1. Header with Breadcrumbs and Back Action */}
+      {/* 1. Header with Breadcrumb and Back Action */}
       <CreateEventHeader onBack={onNavigateBack} />
 
       {/* 2. Form View or Success View */}
@@ -133,6 +186,25 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({
         <CreateEventForm
           formData={formData}
           formErrors={formErrors}
+          startLocation={startLocation}
+          finishLocation={finishLocation}
+          onStartLocationChange={setStartLocation}
+          onFinishLocationChange={setFinishLocation}
+          routePoints={routePoints}
+          routeGeometry={routeGeometry}
+          checkpoints={onMapCheckpoints}
+          onRoutePointsChange={setRoutePoints}
+          onRouteGeometryChange={(geometry, dist, dur) => {
+            setRouteGeometry(geometry);
+            if (dist > 0) {
+              setCalculatedDistanceKm(dist);
+              setFormData((prev) => ({ ...prev, rideDistance: String(dist) }));
+            }
+            if (dur > 0) {
+              setCalculatedDurationMins(dur);
+            }
+          }}
+          onCheckpointsChange={setOnMapCheckpoints}
           isSubmitting={isSubmitting}
           onFieldChange={handleFieldChange}
           onSubmit={handleSubmit}

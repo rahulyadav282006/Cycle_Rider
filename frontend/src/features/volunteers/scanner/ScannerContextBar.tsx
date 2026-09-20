@@ -6,7 +6,7 @@ import WifiOffOutlinedIcon from '@mui/icons-material/WifiOffOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import { colors } from '../../../theme/colors';
 import { RideButton } from '../../../components/ui/RideButton';
-import { ScannerCheckpointContext } from './ScannerMockData';
+import { ScannerCheckpointContext } from './ScannerTypes';
 
 export interface ScannerContextBarProps {
   context: ScannerCheckpointContext;
@@ -102,7 +102,7 @@ export const ScannerContextBar: React.FC<ScannerContextBarProps> = ({
           {context.status}
         </Box>
 
-        {/* Connection status */}
+        {/* Connection status badge */}
         <Box
           sx={{
             display: 'inline-flex',
@@ -121,14 +121,33 @@ export const ScannerContextBar: React.FC<ScannerContextBarProps> = ({
           {isOffline ? (
             <>
               <WifiOffOutlinedIcon sx={{ fontSize: 13, color: '#D97706' }} />
-              Offline &bull; Pending Sync: {context.pendingSyncCount}
+              Offline — scans will sync automatically
             </>
           ) : (
             <>
               <WifiOutlinedIcon sx={{ fontSize: 13, color: '#0284C7' }} />
-              Connected — Online
+              Online
             </>
           )}
+        </Box>
+
+        {/* Pending sync counter badge */}
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            px: 1,
+            py: 0.25,
+            borderRadius: '9999px',
+            backgroundColor: context.pendingSyncCount > 0 ? '#FEF3C7' : '#F1F5F9',
+            border: `1px solid ${context.pendingSyncCount > 0 ? '#FDE68A' : '#CBD5E1'}`,
+            color: context.pendingSyncCount > 0 ? '#92400E' : colors.text.secondary,
+            fontSize: '0.6875rem',
+            fontWeight: 700,
+          }}
+        >
+          Pending sync: {context.pendingSyncCount}
         </Box>
       </Box>
 

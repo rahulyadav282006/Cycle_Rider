@@ -9,23 +9,17 @@ import {
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
-import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
-import LayersClearOutlinedIcon from '@mui/icons-material/LayersClearOutlined';
 import { colors } from '../../../theme/colors';
 import { RideButton } from '../../ui/RideButton';
 
 export interface EventOverviewHeaderProps {
   eventName: string;
-  isEmptyPreview?: boolean;
-  onToggleEmptyPreview?: (isEmpty: boolean) => void;
   onEditEvent: () => void;
   onOpenArchiveDialog: () => void;
 }
 
 export const EventOverviewHeader: React.FC<EventOverviewHeaderProps> = ({
   eventName,
-  isEmptyPreview = false,
-  onToggleEmptyPreview,
   onEditEvent,
   onOpenArchiveDialog,
 }) => {
@@ -47,97 +41,7 @@ export const EventOverviewHeader: React.FC<EventOverviewHeaderProps> = ({
 
   return (
     <Box sx={{ mb: 3 }}>
-      {/* 1. Prototype State Switcher Toolbar (Optional Reviewer Mode) */}
-      {onToggleEmptyPreview && (
-      <Box
-        sx={{
-          backgroundColor: colors.surface.card,
-          border: `1px solid ${colors.surface.borderStrong}`,
-          borderRadius: '8px',
-          p: 1.5,
-          mb: 2.5,
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-          gap: 1.5,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography
-            sx={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: colors.text.muted,
-            }}
-          >
-            Milestone UI-02 Prototype State:
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Box
-            component="button"
-            type="button"
-            onClick={() => onToggleEmptyPreview(false)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.75,
-              px: 1.5,
-              py: 0.75,
-              borderRadius: '6px',
-              fontSize: '0.8125rem',
-              fontWeight: !isEmptyPreview ? 700 : 500,
-              cursor: 'pointer',
-              border: `1px solid ${!isEmptyPreview ? colors.primary.main : colors.surface.borderStrong}`,
-              backgroundColor: !isEmptyPreview ? '#EFF6FF' : colors.surface.card,
-              color: !isEmptyPreview ? colors.primary.main : colors.text.secondary,
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                borderColor: colors.primary.main,
-                color: colors.primary.main,
-              },
-            }}
-          >
-            <ViewListOutlinedIcon sx={{ fontSize: 16 }} />
-            Populated Event (Screen 1)
-          </Box>
-
-          <Box
-            component="button"
-            type="button"
-            onClick={() => onToggleEmptyPreview(true)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.75,
-              px: 1.5,
-              py: 0.75,
-              borderRadius: '6px',
-              fontSize: '0.8125rem',
-              fontWeight: isEmptyPreview ? 700 : 500,
-              cursor: 'pointer',
-              border: `1px solid ${isEmptyPreview ? '#F59E0B' : colors.surface.borderStrong}`,
-              backgroundColor: isEmptyPreview ? '#FFFBEB' : colors.surface.card,
-              color: isEmptyPreview ? '#B45309' : colors.text.secondary,
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                borderColor: '#F59E0B',
-                color: '#B45309',
-              },
-            }}
-          >
-            <LayersClearOutlinedIcon sx={{ fontSize: 16 }} />
-            Empty State Preview (Screen 2)
-          </Box>
-        </Box>
-        </Box>
-      )}
-
-      {/* 2. Page Header Bar */}
+      {/* Page Header Bar */}
       <Box
         sx={{
           display: 'flex',
@@ -158,7 +62,7 @@ export const EventOverviewHeader: React.FC<EventOverviewHeaderProps> = ({
               lineHeight: 1.25,
             }}
           >
-            {isEmptyPreview ? 'New Cycling Event' : eventName}
+            {eventName || 'Event Details'}
           </Typography>
           <Typography
             variant="body1"

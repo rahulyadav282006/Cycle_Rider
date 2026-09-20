@@ -1,76 +1,116 @@
 import React from 'react';
-import { Box, Typography, Avatar } from '@mui/material';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import { Box, Typography, IconButton, Tooltip } from '@mui/material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
-import { colors } from '../../theme/colors';
 import { NAV_ITEMS } from './navItems';
+import { colors } from '../../theme/colors';
 
 export interface SidebarProps {
   activeId: string;
   onNavigate: (id: string) => void;
   onLogout?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavigate, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeId,
+  onNavigate,
+  onLogout,
+  collapsed = false,
+  onToggleCollapse,
+}) => {
+  const sidebarWidth = collapsed ? 72 : 240;
+
   return (
     <Box
       component="aside"
       aria-label="Desktop Main Navigation"
       sx={{
-        width: 250,
+        width: sidebarWidth,
         height: '100vh',
         position: 'fixed',
         left: 0,
         top: 0,
-        backgroundColor: colors.surface.sidebar,
-        color: '#FFFFFF',
-        borderRight: `1px solid ${colors.brand.primaryLight}`,
+        backgroundColor: colors.surface.sidebar, // Light sage green (#EBF2ED)
+        borderRight: `1px solid ${colors.surface.sidebarBorder}`,
         display: 'flex',
         flexDirection: 'column',
         zIndex: 1100,
         userSelect: 'none',
+        transition: 'width 0.2s ease-in-out',
+        overflowX: 'hidden',
       }}
     >
       {/* Brand Header */}
       <Box
         sx={{
           height: 64,
-          px: 2.5,
+          px: collapsed ? 1.5 : 2.5,
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          borderBottom: `1px solid ${colors.surface.sidebarBorder}`,
         }}
       >
-        <Box
-          sx={{
-            width: 34,
-            height: 34,
-            borderRadius: '6px',
-            backgroundColor: colors.brand.accent,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            flexShrink: 0,
-          }}
-        >
-          <DirectionsBikeIcon sx={{ fontSize: 20 }} />
-        </Box>
-        <Box>
-          <Typography
-            variant="h3"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+          {/* Logo Badge */}
+          <Box
+            component="img"
+            src="/ridetrack-emblem.png"
+            alt="RideTrack Logo"
             sx={{
-              fontSize: '1.05rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              color: '#FFFFFF',
-              lineHeight: 1.1,
+              height: collapsed ? 24 : 34,
+              maxWidth: collapsed ? 50 : 82,
+              width: 'auto',
+              borderRadius: '7px',
+              objectFit: 'contain',
+              flexShrink: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
             }}
-          >
-            RideTrack
-          </Typography>
+          />
+
+          {!collapsed && (
+            <Typography
+              variant="h3"
+              sx={{
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: colors.text.primary,
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              RideTrack
+            </Typography>
+          )}
         </Box>
+
+        {/* Collapse / Expand Toggle Button */}
+        {onToggleCollapse && (
+          <Tooltip title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} placement="right">
+            <IconButton
+              size="small"
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: '6px',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                color: colors.text.secondary,
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                  color: colors.text.primary,
+                },
+              }}
+            >
+              {collapsed ? <ChevronRightIcon sx={{ fontSize: 18 }} /> : <ChevronLeftIcon sx={{ fontSize: 18 }} />}
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       {/* Navigation List */}
@@ -78,18 +118,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavigate, onLogout
         component="nav"
         sx={{
           flex: 1,
-          px: 1.5,
+          px: collapsed ? 1 : 1.5,
           py: 2,
           display: 'flex',
           flexDirection: 'column',
-          gap: 0.5,
+          gap: 0.75,
           overflowY: 'auto',
+          alignItems: collapsed ? 'center' : 'stretch',
         }}
       >
         {NAV_ITEMS.map((item) => {
           const isActive = activeId === item.id;
 
-          return (
+          const buttonContent = (
             <Box
               key={item.id}
               component="button"
@@ -100,166 +141,135 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavigate, onLogout
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start',
                 gap: 1.5,
-                px: 1.5,
-                py: 1.25,
-                borderRadius: '6px',
+                px: collapsed ? 1 : 1.75,
+                py: 1.2,
+                borderRadius: '10px',
                 border: 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
                 fontFamily: 'inherit',
                 fontSize: '0.875rem',
-                fontWeight: isActive ? 600 : 500,
+                fontWeight: isActive ? 700 : 500,
                 backgroundColor: isActive ? colors.surface.sidebarActive : 'transparent',
-                transition: 'all 0.15s ease-in-out',
-                position: 'relative',
+                color: isActive ? colors.surface.sidebarActiveText : colors.text.secondary,
+                transition: 'all 0.15s ease',
                 '&:hover': {
-                  backgroundColor: isActive ? colors.surface.sidebarActive : 'rgba(255, 255, 255, 0.08)',
-                  '& .sidebar-label': {
-                    color: '#FFFFFF',
-                  },
+                  backgroundColor: isActive ? colors.surface.sidebarActive : 'rgba(0, 0, 0, 0.04)',
+                  color: colors.text.primary,
                   '& .sidebar-icon': {
-                    color: '#FFFFFF',
+                    color: colors.brand.primary,
                   },
-                },
-                '&:focus-visible': {
-                  outline: `2px solid ${colors.brand.accent}`,
-                  outlineOffset: '2px',
                 },
               }}
             >
-              {/* Active vertical accent bar */}
-              {isActive && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    left: 0,
-                    top: '15%',
-                    bottom: '15%',
-                    width: 3,
-                    borderRadius: '0 3px 3px 0',
-                    backgroundColor: colors.brand.accent,
-                  }}
-                />
-              )}
               <Box
                 className="sidebar-icon"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: isActive ? '#38BDF8' : '#CBD5E1', // High contrast slate-300 / sky-400
+                  color: isActive ? colors.brand.primary : colors.text.muted,
                   transition: 'color 0.15s ease',
+                  flexShrink: 0,
                 }}
               >
                 {item.icon}
               </Box>
-              <Typography
-                component="span"
-                className="sidebar-label"
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: isActive ? 600 : 500,
-                  letterSpacing: '0.01em',
-                  color: isActive ? '#FFFFFF' : '#E2E8F0', // High contrast visible slate-200 / white
-                  transition: 'color 0.15s ease',
-                }}
-              >
-                {item.label}
-              </Typography>
+
+              {!collapsed && (
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: isActive ? 700 : 500,
+                    letterSpacing: '0.01em',
+                    lineHeight: 1,
+                    whiteSpace: 'nowrap',
+                    color: isActive ? colors.surface.sidebarActiveText : colors.text.secondary,
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              )}
             </Box>
+          );
+
+          return collapsed ? (
+            <Tooltip key={item.id} title={item.label} placement="right" arrow>
+              {buttonContent}
+            </Tooltip>
+          ) : (
+            buttonContent
           );
         })}
       </Box>
 
-      {/* User / Profile Area (Visual Only) */}
+      {/* Bottom Area: ONLY show the existing Logout action */}
       <Box
         sx={{
-          p: 1.75,
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          p: collapsed ? 1.5 : 2,
+          borderTop: `1px solid ${colors.surface.sidebarBorder}`,
+          display: 'flex',
+          justifyContent: 'center',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            px: 1,
-            py: 0.75,
-            borderRadius: '6px',
-          }}
-        >
-          <Avatar
-            sx={{
-              width: 34,
-              height: 34,
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              backgroundColor: colors.brand.accent,
-              color: '#FFFFFF',
-            }}
-          >
-            OP
-          </Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: '#FFFFFF',
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Organizer
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '0.75rem',
-                color: '#94A3B8',
-                lineHeight: 1.2,
-              }}
-            >
-              Organizer Admin
-            </Typography>
-          </Box>
-        </Box>
-
         {onLogout && (
-          <Box
-            component="button"
-            type="button"
-            onClick={onLogout}
-            sx={{
-              mt: 1.25,
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 0.75,
-              py: 0.75,
-              px: 1.5,
-              borderRadius: '6px',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              color: '#FCA5A5',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(239, 68, 68, 0.25)',
-                color: '#FFFFFF',
-                borderColor: 'rgba(239, 68, 68, 0.6)',
-              },
-            }}
-          >
-            <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
-            Logout
-          </Box>
+          collapsed ? (
+            <Tooltip title="Logout" placement="right" arrow>
+              <IconButton
+                onClick={onLogout}
+                aria-label="Logout"
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.surface.border}`,
+                  backgroundColor: '#FFFFFF',
+                  color: colors.text.secondary,
+                  '&:hover': {
+                    backgroundColor: '#FEF2F2',
+                    borderColor: '#FECACA',
+                    color: '#DC2626',
+                  },
+                }}
+              >
+                <LogoutOutlinedIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Box
+              component="button"
+              type="button"
+              onClick={onLogout}
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+                py: 1,
+                px: 2,
+                borderRadius: '8px',
+                border: `1px solid ${colors.surface.border}`,
+                backgroundColor: '#FFFFFF',
+                color: colors.text.secondary,
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  backgroundColor: '#FEF2F2',
+                  borderColor: '#FECACA',
+                  color: '#DC2626',
+                },
+              }}
+            >
+              <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
+              Logout
+            </Box>
+          )
         )}
       </Box>
     </Box>

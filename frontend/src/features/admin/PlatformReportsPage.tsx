@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -30,11 +30,11 @@ import { AdminDashboardStats } from './AdminDashboardStats';
 import { AdminEmptyState } from './AdminEmptyState';
 import { RideButton } from '../../components/ui/RideButton';
 import {
-  MOCK_PLATFORM_REPORTS_STATS,
   MOCK_PLATFORM_REPORT_CARDS,
-  MOCK_ADMIN_RECENT_REPORTS,
   PlatformReportCardDef,
+  PlatformStatItem,
 } from './mockAdminData';
+import { adminService } from '../../api/services';
 
 export type PlatformReportsState = 'populated' | 'empty';
 
@@ -50,6 +50,27 @@ export const PlatformReportsPage: React.FC<PlatformReportsPageProps> = ({
   const [prototypeState, setPrototypeState] = useState<PlatformReportsState>('populated');
   const [reportingPeriod, setReportingPeriod] = useState<string>('2026 Season');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [recentReports] = useState<any[]>([]);
+  const [stats, setStats] = useState<PlatformStatItem[]>([
+    { id: 'stat-total-organizers', label: 'Total Organizers', value: 0, subtext: 'Registered organizers' },
+    { id: 'stat-active-events', label: 'Active Events', value: 0, subtext: 'Currently active rides' },
+    { id: 'stat-total-riders', label: 'Total Riders', value: 0, subtext: 'Across all events' },
+    { id: 'stat-total-checkpoints', label: 'Checkpoints', value: 0, subtext: 'Timing controls' },
+  ]);
+
+  useEffect(() => {
+    let isMounted = true;
+    adminService.getStats().then((data) => {
+      if (!isMounted || !data) return;
+      setStats([
+        { id: 'stat-total-organizers', label: 'Total Organizers', value: data.totalOrganizers || 0, subtext: `${data.activeOrganizers || 0} active organizers` },
+        { id: 'stat-active-events', label: 'Active Events', value: data.activeEvents || 0, subtext: `${data.totalEvents || 0} total events` },
+        { id: 'stat-total-riders', label: 'Total Riders', value: data.totalRiders || 0, subtext: 'Across all events' },
+        { id: 'stat-total-checkpoints', label: 'Checkpoints', value: data.totalCheckpoints || 0, subtext: 'Timing controls' },
+      ]);
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const getCardIcon = (iconName: PlatformReportCardDef['iconName']) => {
     switch (iconName) {
@@ -214,7 +235,7 @@ export const PlatformReportsPage: React.FC<PlatformReportsPageProps> = ({
       </Box>
 
       {/* Summary Cards */}
-      <AdminDashboardStats stats={MOCK_PLATFORM_REPORTS_STATS} />
+      <AdminDashboardStats stats={stats} />
 
       {/* Main Content: Populated or Empty State */}
       {prototypeState === 'empty' ? (
@@ -384,7 +405,14 @@ export const PlatformReportsPage: React.FC<PlatformReportsPageProps> = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {MOCK_ADMIN_RECENT_REPORTS.map((rep) => (
+                  {recentReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4, color: colors.text.muted, fontSize: '0.875rem' }}>
+                        No generated reports yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentReports.map((rep) => (
                     <TableRow
                       key={rep.id}
                       hover
@@ -464,7 +492,7 @@ export const PlatformReportsPage: React.FC<PlatformReportsPageProps> = ({
                         </Box>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
                 </TableBody>
               </Table>
             </TableContainer>

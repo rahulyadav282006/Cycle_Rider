@@ -14,6 +14,8 @@ export interface RegisterRiderSuccessProps {
     name: string;
     event: string;
     jerseyNumber: string;
+    paymentStatus?: string;
+    paymentRequired?: boolean;
   };
   onGenerateQrCode: () => void;
   onBackToRiders: () => void;
@@ -121,7 +123,7 @@ export const RegisterRiderSuccess: React.FC<RegisterRiderSuccessProps> = ({
               Rider Name
             </Typography>
             <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: colors.text.primary }}>
-              {summary.name || 'Rahul Patil'}
+              {summary.name || 'Rider'}
             </Typography>
           </Box>
 
@@ -138,7 +140,7 @@ export const RegisterRiderSuccess: React.FC<RegisterRiderSuccessProps> = ({
               borderRadius: '4px',
             }}
           >
-            {summary.riderId || 'RT-0011'}
+            {summary.riderId || ''}
           </Box>
         </Box>
 
@@ -157,7 +159,7 @@ export const RegisterRiderSuccess: React.FC<RegisterRiderSuccessProps> = ({
                 EVENT
               </Typography>
               <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary }}>
-                {summary.event || 'Kolhapur Endurance Ride'}
+                {summary.event || ''}
               </Typography>
             </Box>
           </Box>
@@ -169,12 +171,36 @@ export const RegisterRiderSuccess: React.FC<RegisterRiderSuccessProps> = ({
                 JERSEY NUMBER
               </Typography>
               <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: colors.text.primary }}>
-                #{summary.jerseyNumber || '111'}
+                {summary.jerseyNumber ? `#${summary.jerseyNumber}` : ''}
               </Typography>
             </Box>
           </Box>
         </Box>
       </Box>
+
+      {/* Payment Verification Pending Notice */}
+      {(summary.paymentStatus || '').toLowerCase() === 'pending' && (
+        <Box
+          id="registration-payment-warning"
+          sx={{
+            width: '100%',
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FCD34D',
+            borderRadius: '8px',
+            p: 2,
+            mb: 3.5,
+            textAlign: 'left',
+          }}
+        >
+          <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', color: '#92400E', mb: 0.5 }}>
+            Payment Verification Required
+          </Typography>
+          <Typography sx={{ fontSize: '0.8125rem', color: '#B45309', lineHeight: 1.4 }}>
+            Payment verification required before QR pass is issued.<br />
+            Please contact the event organizer to complete payment.
+          </Typography>
+        </Box>
+      )}
 
       {/* 4. Action Buttons */}
       <Box
@@ -201,21 +227,40 @@ export const RegisterRiderSuccess: React.FC<RegisterRiderSuccessProps> = ({
           Back to Riders
         </RideButton>
 
-        {/* Primary: Generate QR Code */}
-        <RideButton
-          variant="primary"
-          size="md"
-          startIcon={<QrCode2OutlinedIcon />}
-          onClick={onGenerateQrCode}
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            minHeight: 44,
-            fontWeight: 700,
-            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.12)',
-          }}
-        >
-          Generate QR Code
-        </RideButton>
+        {/* Primary: Generate QR Code (only if payment not pending) */}
+        {(summary.paymentStatus || '').toLowerCase() === 'pending' ? (
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              px: 2,
+              py: 1,
+              backgroundColor: '#F3F4F6',
+              border: '1px solid #D1D5DB',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              color: '#6B7280',
+              fontWeight: 600,
+            }}
+          >
+            QR Pass Locked (Payment Pending)
+          </Box>
+        ) : (
+          <RideButton
+            variant="primary"
+            size="md"
+            startIcon={<QrCode2OutlinedIcon />}
+            onClick={onGenerateQrCode}
+            sx={{
+              width: { xs: '100%', sm: 'auto' },
+              minHeight: 44,
+              fontWeight: 700,
+              boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.12)',
+            }}
+          >
+            Generate QR Code
+          </RideButton>
+        )}
       </Box>
     </Box>
   );

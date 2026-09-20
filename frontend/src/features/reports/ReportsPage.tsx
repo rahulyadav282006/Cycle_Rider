@@ -213,21 +213,25 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ eventId }) => {
         />
       ) : activeState === 'finishers' ? (
         <FinishersReport
+          eventId={currentEvent.id}
           onBackToReports={() => handleStateChange('dashboard')}
           onExport={(fmt) => handleTriggerExport(`Finishers Report (${fmt})`)}
         />
       ) : activeState === 'dnf' ? (
         <DnfReport
+          eventId={currentEvent.id}
           onBackToReports={() => handleStateChange('dashboard')}
           onExport={(fmt) => handleTriggerExport(`DNF Riders Report (${fmt})`)}
         />
       ) : activeState === 'home_safe' ? (
         <HomeSafeReport
+          eventId={currentEvent.id}
           onBackToReports={() => handleStateChange('dashboard')}
           onExport={(fmt) => handleTriggerExport(`Home Safe Confirmation (${fmt})`)}
         />
       ) : activeState === 'event_summary' ? (
         <EventSummaryReport
+          eventId={currentEvent.id}
           onBackToReports={() => handleStateChange('dashboard')}
           onExport={(fmt) => handleTriggerExport(`Event Summary Report (${fmt})`)}
         />

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import PeopleIcon from '@mui/icons-material/People';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import { colors } from '../../theme/colors';
-import { RideButton } from '../ui/RideButton';
 
 export interface EmptyRidersStateProps {
   onRegisterRider: () => void;
@@ -14,8 +13,8 @@ export const EmptyRidersState: React.FC<EmptyRidersStateProps> = ({ onRegisterRi
     <Box
       sx={{
         backgroundColor: colors.surface.card,
-        border: `1px dashed ${colors.surface.borderStrong}`,
-        borderRadius: '8px',
+        border: `1px solid ${colors.surface.border}`,
+        borderRadius: '14px',
         py: { xs: 8, sm: 10 },
         px: 3,
         textAlign: 'center',
@@ -23,64 +22,76 @@ export const EmptyRidersState: React.FC<EmptyRidersStateProps> = ({ onRegisterRi
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.02)',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
       }}
     >
       <Box
         sx={{
-          width: 68,
-          height: 68,
+          width: 64,
+          height: 64,
           borderRadius: '50%',
-          backgroundColor: colors.surface.subtle,
-          border: `1px solid ${colors.surface.border}`,
+          backgroundColor: '#D1FAE5',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: colors.brand.accent,
+          color: '#0F766E',
           mb: 2.5,
         }}
       >
-        <PeopleIcon sx={{ fontSize: 34 }} />
+        <PersonOutlineOutlinedIcon sx={{ fontSize: 32 }} />
       </Box>
 
       <Typography
         variant="h2"
         sx={{
           fontSize: { xs: '1.25rem', sm: '1.375rem' },
-          fontWeight: 700,
+          fontWeight: 800,
           color: colors.text.primary,
           letterSpacing: '-0.02em',
           mb: 1,
         }}
       >
-        No Riders Registered
+        No riders found
       </Typography>
 
       <Typography
         sx={{
           fontSize: '0.875rem',
-          color: colors.text.secondary,
+          color: colors.text.muted,
           maxWidth: 420,
           mb: 3,
           lineHeight: 1.5,
         }}
       >
-        Register riders for this event to begin tracking participation.
+        Register riders to start managing your event.
       </Typography>
 
-      <RideButton
-        variant="primary"
-        size="md"
-        startIcon={<PersonAddOutlinedIcon />}
+      <Box
+        component="button"
+        type="button"
         onClick={onRegisterRider}
         sx={{
           minHeight: 44,
           px: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1,
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: '#135F63',
+          color: '#FFFFFF',
+          fontSize: '0.875rem',
           fontWeight: 700,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          '&:hover': {
+            backgroundColor: '#0E484B',
+          },
         }}
       >
-        + Register Rider
-      </RideButton>
+        <PersonAddOutlinedIcon sx={{ fontSize: 18 }} />
+        Register Rider
+      </Box>
     </Box>
   );
 };
