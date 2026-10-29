@@ -73,14 +73,14 @@ async def get_live_tracking_data(
         passed_cnt = scans_by_cp.get(cp["id"], 0)
         pct = round((passed_cnt / total_registered * 100), 1) if total_registered > 0 else 0.0
         checkpoint_progress.append({
-            "id": cp["id"],
-            "number": f"CP {cp['sequenceNumber']:02d}",
+            "checkpointId": cp["id"],
+            "sequenceNumber": cp["sequenceNumber"],
             "name": cp["name"],
             "type": cp.get("type", "Standard"),
             "mandatory": cp.get("mandatory", True),
-            "passedRiders": passed_cnt,
+            "scannedCount": passed_cnt,
             "totalRiders": total_registered,
-            "completionPct": pct,
+            "percentage": pct,
             "status": "Active" if passed_cnt > 0 else "Pending",
         })
 

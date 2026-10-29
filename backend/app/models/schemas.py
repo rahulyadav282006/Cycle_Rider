@@ -1,13 +1,13 @@
+import re
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, List, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # --------------------------------------------------
 # ROLES
 # --------------------------------------------------
 class UserRole(str, Enum):
-    SUPER_ADMIN = "SUPER_ADMIN"
     ORGANIZER = "ORGANIZER"
     VOLUNTEER = "VOLUNTEER"
 
@@ -61,6 +61,32 @@ class EventStatus(str, Enum):
 
 class EventCreateRequest(BaseModel):
     eventName: str
+
+    @field_validator("eventName")
+    @classmethod
+    def validate_event_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Event name cannot be empty")
+        if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+            raise ValueError("Event name must contain only characters (letters and spaces, no numbers or symbols)")
+        return v.strip()
+
+    @field_validator("rideDate")
+    @classmethod
+    def validate_ride_date(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Ride date cannot be empty")
+        date_str = v.strip()
+        try:
+            if "-" in date_str and len(date_str.split("-")[0]) == 4:
+                parsed = datetime.strptime(date_str, "%Y-%m-%d").date()
+            else:
+                parsed = datetime.strptime(date_str, "%d-%m-%Y").date()
+        except ValueError:
+            raise ValueError("Ride date must be in YYYY-MM-DD format")
+        if parsed < datetime.now().date():
+            raise ValueError("Ride date cannot be in the past. Please select today or a future date.")
+        return date_str
     description: Optional[str] = ""
     location: str
     rideDistance: str | int | float
@@ -80,6 +106,36 @@ class EventCreateRequest(BaseModel):
 
 class EventUpdateRequest(BaseModel):
     eventName: Optional[str] = None
+
+    @field_validator("eventName")
+    @classmethod
+    def validate_event_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Event name cannot be empty")
+            if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+                raise ValueError("Event name must contain only characters (letters and spaces, no numbers or symbols)")
+            return v
+
+    @field_validator("rideDate")
+    @classmethod
+    def validate_ride_date_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Ride date cannot be empty")
+            date_str = v.strip()
+            try:
+                if "-" in date_str and len(date_str.split("-")[0]) == 4:
+                    parsed = datetime.strptime(date_str, "%Y-%m-%d").date()
+                else:
+                    parsed = datetime.strptime(date_str, "%d-%m-%Y").date()
+            except ValueError:
+                raise ValueError("Ride date must be in YYYY-MM-DD format")
+            if parsed < datetime.now().date():
+                raise ValueError("Ride date cannot be in the past. Please select today or a future date.")
+            return date_str
+        return v.strip()
+        return v
     description: Optional[str] = None
     location: Optional[str] = None
     rideDistance: Optional[str | int | float] = None
@@ -162,6 +218,15 @@ class CheckpointResponse(BaseModel):
 # --------------------------------------------------
 class RiderCreateRequest(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_rider_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Rider name cannot be empty")
+        if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+            raise ValueError("Rider name must contain only characters (letters and spaces, no numbers or symbols)")
+        return v.strip()
     mobile: str
     emergencyContact: str
     bloodGroup: Optional[str] = "O+"
@@ -175,6 +240,17 @@ class RiderCreateRequest(BaseModel):
 
 class RiderUpdateRequest(BaseModel):
     name: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_rider_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Rider name cannot be empty")
+            if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+                raise ValueError("Rider name must contain only characters (letters and spaces, no numbers or symbols)")
+            return v.strip()
+        return v
     mobile: Optional[str] = None
     emergencyContact: Optional[str] = None
     bloodGroup: Optional[str] = None
@@ -217,14 +293,38 @@ class RiderPaymentUpdateRequest(BaseModel):
 # --------------------------------------------------
 class VolunteerCreateRequest(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_volunteer_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Volunteer name cannot be empty")
+        if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+            raise ValueError("Volunteer name must contain only characters (letters and spaces, no numbers or symbols)")
+        return v.strip()
     mobile: str
+    email: Optional[str] = None
+    password: Optional[str] = None
     checkpointId: Optional[str] = None
     checkpointName: Optional[str] = None
     status: str = "Assigned"
 
 class VolunteerUpdateRequest(BaseModel):
     name: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_volunteer_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Volunteer name cannot be empty")
+            if not re.match(r"^[A-Za-z\s]+$", v.strip()):
+                raise ValueError("Volunteer name must contain only characters (letters and spaces, no numbers or symbols)")
+            return v.strip()
+        return v
     mobile: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
     checkpointId: Optional[str] = None
     checkpointName: Optional[str] = None
     status: Optional[str] = None
@@ -237,6 +337,7 @@ class VolunteerResponse(BaseModel):
     checkpointName: Optional[str] = None
     name: str
     mobile: str
+    email: Optional[str] = None
     status: str
     createdAt: str
     updatedAt: str

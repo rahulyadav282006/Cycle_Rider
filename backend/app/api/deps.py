@@ -64,6 +64,6 @@ def require_roles(allowed_roles: List[UserRole]):
         return current_user
     return role_checker
 
-require_super_admin = require_roles([UserRole.SUPER_ADMIN])
-require_organizer = require_roles([UserRole.ORGANIZER, UserRole.SUPER_ADMIN])
-require_volunteer = require_roles([UserRole.VOLUNTEER, UserRole.SUPER_ADMIN])
+require_organizer = require_roles([UserRole.ORGANIZER])
+require_volunteer = require_roles([UserRole.VOLUNTEER])
+require_super_admin = require_organizer

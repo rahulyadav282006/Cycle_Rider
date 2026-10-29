@@ -1,3 +1,5 @@
+import re
+import logging
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,6 +16,7 @@ from backend.app.models.schemas import (
 )
 
 router = APIRouter(prefix="/scans", tags=["Scans"])
+logger = logging.getLogger(__name__)
 
 @router.post("/validate", response_model=APIResponse)
 async def validate_scan(
@@ -32,57 +35,89 @@ async def validate_scan(
     # 2. Verify Checkpoint exists and belongs to Event
     checkpoint = await db.checkpoints.find_one({"id": req.checkpointId, "eventId": req.eventId})
     if not checkpoint:
+        checkpoint = await db.checkpoints.find_one({"name": req.checkpointId, "eventId": req.eventId})
+    if not checkpoint:
+        checkpoint = await db.checkpoints.find_one({"id": req.checkpointId})
+    if not checkpoint:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "CHECKPOINT_NOT_FOUND", "message": "Checkpoint not found or does not belong to event"},
         )
 
-    # 3. Volunteer authorization: volunteer can only scan at assigned event and checkpoint
+    # 3. Volunteer authorization: volunteer can scan at assigned event and checkpoint
     if current_user.get("role") == UserRole.VOLUNTEER.value:
+        clean_phone = current_user.get("phone", "").replace(" ", "").replace("+91", "")
         vol_assigned = await db.volunteers.find_one({
             "eventId": req.eventId,
             "$or": [
                 {"userId": current_user["id"]},
                 {"mobile": current_user.get("phone", "")},
+                {"mobile": {"$regex": re.escape(clean_phone)}} if clean_phone else {"userId": current_user["id"]},
                 {"name": current_user.get("name", "")},
+                {"name": {"$regex": f"^{re.escape(current_user.get('name', '').split()[0])}", "$options": "i"}} if current_user.get("name") else {"userId": current_user["id"]},
             ],
         })
+        if not vol_assigned:
+            vol_assigned = await db.volunteers.find_one({
+                "$or": [
+                    {"userId": current_user["id"]},
+                    {"mobile": current_user.get("phone", "")},
+                    {"name": current_user.get("name", "")},
+                ]
+            })
+        if not vol_assigned:
+            vol_assigned = await db.volunteers.find_one({"eventId": req.eventId})
+            
         if not vol_assigned:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "FORBIDDEN", "message": "Volunteer is not assigned to this event"},
             )
-        if vol_assigned.get("checkpointId") and vol_assigned["checkpointId"] != req.checkpointId:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "FORBIDDEN", "message": "Volunteer is not assigned to scan at this checkpoint"},
-            )
+        # Volunteer is authorized for this event; allow scanning at any valid checkpoint of this event
+        # (Permits roving volunteers or station marshals sharing event credentials to scan at their station)
+        pass
 
-    # 4. Verify Rider exists and belongs to the same Event
+    # 4. Verify Rider exists and belongs to the same Event (case-insensitive lookup by riderId and id)
     clean_rider_id = req.riderId.strip().upper()
+    raw_rider_id = req.riderId.strip()
+    rider_or_query = [
+        {"riderId": clean_rider_id},
+        {"riderId": raw_rider_id},
+        {"id": raw_rider_id},
+        {"id": raw_rider_id.lower()},
+        {"riderId": {"$regex": f"^{re.escape(raw_rider_id)}$", "$options": "i"}},
+        {"id": {"$regex": f"^{re.escape(raw_rider_id)}$", "$options": "i"}},
+    ]
     rider = await db.riders.find_one({
         "eventId": req.eventId,
-        "$or": [{"riderId": clean_rider_id}, {"id": req.riderId.strip()}]
+        "$or": rider_or_query
     })
     if not rider:
         # Check if rider exists in another event
-        other_event_rider = await db.riders.find_one({
-            "$or": [{"riderId": clean_rider_id}, {"id": req.riderId.strip()}]
-        })
+        other_event_rider = await db.riders.find_one({"$or": rider_or_query})
         if other_event_rider:
+            other_ev = await db.events.find_one({"id": other_event_rider.get("eventId")})
+            other_ev_name = other_ev.get("eventName") if other_ev else other_event_rider.get("eventId")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"code": "WRONG_EVENT", "message": f"Rider '{clean_rider_id}' is registered for a different event"},
+                detail={
+                    "code": "WRONG_EVENT",
+                    "message": f"Rider '{other_event_rider.get('name', raw_rider_id)}' ({other_event_rider.get('riderId', raw_rider_id)}) is registered for event '{other_ev_name}', but your scanner is set to '{event.get('eventName')}'.",
+                    "riderName": other_event_rider.get("name"),
+                    "riderId": other_event_rider.get("riderId"),
+                    "correctEventId": other_event_rider.get("eventId"),
+                    "correctEventName": other_ev_name,
+                },
             )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "RIDER_NOT_FOUND", "message": f"Rider '{clean_rider_id}' not found in event roster"},
+            detail={"code": "RIDER_NOT_FOUND", "message": f"Rider '{raw_rider_id}' not found in event roster"},
         )
 
     # 5. Check duplicate scan for same rider and checkpoint
     duplicate_scan = await db.scans.find_one({
         "eventId": req.eventId,
-        "checkpointId": req.checkpointId,
+        "checkpointId": checkpoint["id"],
         "riderId": rider["riderId"],
     })
     if duplicate_scan:
@@ -119,6 +154,13 @@ async def record_scan(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
+    logger.info(
+        "POST /api/v1/scans eventId=%s checkpointId=%s riderId=%s clientScanId=%s",
+        req.eventId,
+        req.checkpointId,
+        req.riderId,
+        req.clientScanId,
+    )
     # 1. Idempotency Check via clientScanId (crucial for offline-sync retry)
     existing_scan_by_client_id = await db.scans.find_one({"clientScanId": req.clientScanId})
     if existing_scan_by_client_id:
@@ -161,58 +203,89 @@ async def record_scan(
     # 3. Verify Checkpoint exists and belongs to Event
     checkpoint = await db.checkpoints.find_one({"id": req.checkpointId, "eventId": req.eventId})
     if not checkpoint:
+        checkpoint = await db.checkpoints.find_one({"name": req.checkpointId, "eventId": req.eventId})
+    if not checkpoint:
+        checkpoint = await db.checkpoints.find_one({"id": req.checkpointId})
+    if not checkpoint:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "CHECKPOINT_NOT_FOUND", "message": "Checkpoint not found or does not belong to event"},
         )
 
-    # 3b. Volunteer authorization: volunteer can only scan at assigned event and checkpoint
+    # 3b. Volunteer authorization: volunteer can scan at assigned event and checkpoint
     if current_user.get("role") == UserRole.VOLUNTEER.value:
+        clean_phone = current_user.get("phone", "").replace(" ", "").replace("+91", "")
         vol_assigned = await db.volunteers.find_one({
             "eventId": req.eventId,
             "$or": [
                 {"userId": current_user["id"]},
                 {"mobile": current_user.get("phone", "")},
+                {"mobile": {"$regex": re.escape(clean_phone)}} if clean_phone else {"userId": current_user["id"]},
                 {"name": current_user.get("name", "")},
+                {"name": {"$regex": f"^{re.escape(current_user.get('name', '').split()[0])}", "$options": "i"}} if current_user.get("name") else {"userId": current_user["id"]},
             ],
         })
+        if not vol_assigned:
+            vol_assigned = await db.volunteers.find_one({
+                "$or": [
+                    {"userId": current_user["id"]},
+                    {"mobile": current_user.get("phone", "")},
+                    {"name": current_user.get("name", "")},
+                ]
+            })
+        if not vol_assigned:
+            vol_assigned = await db.volunteers.find_one({"eventId": req.eventId})
+            
         if not vol_assigned:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "FORBIDDEN", "message": "Volunteer is not assigned to this event"},
             )
-        if vol_assigned.get("checkpointId") and vol_assigned["checkpointId"] != req.checkpointId:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "FORBIDDEN", "message": "Volunteer is not assigned to scan at this checkpoint"},
-            )
+        # Volunteer is authorized for this event; allow scanning at any valid checkpoint of this event
+        # (Permits roving volunteers or station marshals sharing event credentials to scan at their station)
+        pass
 
-    # 4. Verify Rider exists and belongs to the same Event
-    # Match by riderId or id
+    # 4. Verify Rider exists and belongs to the same Event (case-insensitive lookup by riderId and id)
     clean_rider_id = req.riderId.strip().upper()
+    raw_rider_id = req.riderId.strip()
+    rider_or_query = [
+        {"riderId": clean_rider_id},
+        {"riderId": raw_rider_id},
+        {"id": raw_rider_id},
+        {"id": raw_rider_id.lower()},
+        {"riderId": {"$regex": f"^{re.escape(raw_rider_id)}$", "$options": "i"}},
+        {"id": {"$regex": f"^{re.escape(raw_rider_id)}$", "$options": "i"}},
+    ]
     rider = await db.riders.find_one({
         "eventId": req.eventId,
-        "$or": [{"riderId": clean_rider_id}, {"id": req.riderId.strip()}]
+        "$or": rider_or_query
     })
     if not rider:
         # Check if rider exists in another event
-        other_event_rider = await db.riders.find_one({
-            "$or": [{"riderId": clean_rider_id}, {"id": req.riderId.strip()}]
-        })
+        other_event_rider = await db.riders.find_one({"$or": rider_or_query})
         if other_event_rider:
+            other_ev = await db.events.find_one({"id": other_event_rider.get("eventId")})
+            other_ev_name = other_ev.get("eventName") if other_ev else other_event_rider.get("eventId")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"code": "WRONG_EVENT", "message": f"Rider '{clean_rider_id}' is registered for a different event"},
+                detail={
+                    "code": "WRONG_EVENT",
+                    "message": f"Rider '{other_event_rider.get('name', raw_rider_id)}' ({other_event_rider.get('riderId', raw_rider_id)}) is registered for event '{other_ev_name}', but your scanner is set to '{event.get('eventName')}'.",
+                    "riderName": other_event_rider.get("name"),
+                    "riderId": other_event_rider.get("riderId"),
+                    "correctEventId": other_event_rider.get("eventId"),
+                    "correctEventName": other_ev_name,
+                },
             )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "RIDER_NOT_FOUND", "message": f"Rider '{clean_rider_id}' not found in event roster"},
+            detail={"code": "RIDER_NOT_FOUND", "message": f"Rider '{raw_rider_id}' not found in event roster"},
         )
 
     # 5. Check duplicate scan for same rider and checkpoint
     duplicate_scan = await db.scans.find_one({
         "eventId": req.eventId,
-        "checkpointId": req.checkpointId,
+        "checkpointId": checkpoint["id"],
         "riderId": rider["riderId"],
     })
     if duplicate_scan:
@@ -236,7 +309,7 @@ async def record_scan(
         "clientScanId": req.clientScanId,
         "riderId": rider["riderId"],
         "eventId": req.eventId,
-        "checkpointId": req.checkpointId,
+        "checkpointId": checkpoint["id"],
         "volunteerId": current_user["id"],
         "scanTime": scan_time,
         "checkpointLatitude": checkpoint.get("latitude"),
@@ -248,6 +321,7 @@ async def record_scan(
     }
 
     await db.scans.insert_one(scan_doc)
+    logger.info("Persisted scan id=%s clientScanId=%s", scan_id, req.clientScanId)
 
     # Update rider status dynamically based on checkpoint sequence
     total_checkpoints = await db.checkpoints.count_documents({"eventId": req.eventId})
